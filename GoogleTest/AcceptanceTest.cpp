@@ -82,7 +82,6 @@ TEST(ProcessOrdersTestSuit, BuyOrderForNewAndRemainingSell) {
     orderBook.AddOrder(sellorder_5);
     orderBook.AddOrder(buyorder_6);
 
-
     std::vector<Trade> expectedTrades = {
         {3, 4, 105, 7, /* timestamp not compared */},
         {6, 5, 110, 3, /* timestamp not compared */},
@@ -124,17 +123,12 @@ TEST(ProcessOrdersTestSuit, SellOrderFulfilledForRemainder) {
     Order sellorder4{OrderType::sell, 4, 119, 100};
     Order buyorder5{OrderType::buy, 5, 119, 1};
 
-
-
-
     OrderBook orderBook;
     orderBook.AddOrder(sellorder1);
     orderBook.AddOrder(buyorder2);
     orderBook.AddOrder(buyorder3);
     orderBook.AddOrder(sellorder4);
     orderBook.AddOrder(buyorder5);
-
-
 
     std::vector<Trade> expectedTrades = {
         {2, 1, 120, 10, /* timestamp not compared */},
@@ -151,7 +145,92 @@ TEST(ProcessOrdersTestSuit, SellOrderFulfilledForRemainder) {
     }
 }
 
-//TODO: Add some negative test, when we want to sell, but buy order are too low price, and no trade is hapening for some time
+TEST(ProcessOrdersTestSuit, LevelsDontMatch) {
+    /* Test when price levels dont match, no trades should happen
+    *  Add multiple orders, but only one trade should happen
+    */
+
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order sellorder2{OrderType::sell, 2, 100, 5};
+
+    Order buyorder3{OrderType::buy, 3, 99, 5};
+    Order buyorder4{OrderType::buy, 4, 98, 99};
+    Order buyorder5{OrderType::buy, 5, 1, 1};
+
+    Order sellorder6{OrderType::sell, 6, 100, 5};
+    Order sellorder7{OrderType::sell, 7, 101, 99};
+    Order sellorder8{OrderType::sell, 8, 1000, 1};
+
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.AddOrder(buyorder3);
+    orderBook.AddOrder(buyorder4);
+    orderBook.AddOrder(buyorder5);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder6);
+    orderBook.AddOrder(sellorder7);
+    orderBook.AddOrder(sellorder8);
+
+    std::vector<Trade> expectedTrades = {
+        {1, 2, 100, 5, /* timestamp not compared */}
+    };
+
+    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    //check every field in the structure if it is the same
+    for (size_t i = 0; i < expectedTrades.size(); ++i) {
+        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    }
+
+}
+
+TEST(ProcessOrdersTestSuit, IncorrectInput) {
+    /* Test that orders with incorrect input throws and error when added to orderbook,
+     *  and it does not execute trades.
+     */
+
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order buyorder2{OrderType::buy, 2, 101, 0};     //zero quantity
+    Order buyorder3{OrderType::undefined, 3, 200, 5};     //undefined type
+    Order buyorder4{OrderType::buy, 0, 103, 5};     //zero orderid
+    Order buyorder6{OrderType::buy, 1, 105, 5};     //already existing orderid
+    Order buyorder7{OrderType::buy, 7, 0, 5};       //zero price
+    Order buyorder9{OrderType::buy, 9, 99, 5};     //corect order just no match
+    Order sellorder1{OrderType::sell, 11, 100, 5};
+    Order sellorder2{OrderType::sell, 12, 200, 0};      //zero quantity
+    Order sellorder4{OrderType::sell, 0, 200, 5};       //zero orderid
+    Order sellorder6{OrderType::sell, 11, 200, 5};      //already existing orderid
+    Order sellorder7{OrderType::sell, 17, 0, 5};        //zero price
+    Order sellorder9{OrderType::sell, 19, 200, 100};      //corect order just no match
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    EXPECT_THROW(orderBook.AddOrder(buyorder2), std::invalid_argument);
+    orderBook.AddOrder(buyorder3);
+    EXPECT_THROW(orderBook.AddOrder(buyorder4), std::invalid_argument);
+    EXPECT_THROW(orderBook.AddOrder(buyorder6), std::invalid_argument);
+    EXPECT_THROW(orderBook.AddOrder(buyorder7), std::invalid_argument);
+    orderBook.AddOrder(buyorder9);
+
+    orderBook.AddOrder(sellorder1);
+    EXPECT_THROW(orderBook.AddOrder(sellorder2), std::invalid_argument);
+    EXPECT_THROW(orderBook.AddOrder(sellorder4), std::invalid_argument);
+    EXPECT_THROW(orderBook.AddOrder(sellorder6), std::invalid_argument);
+    EXPECT_THROW(orderBook.AddOrder(sellorder7), std::invalid_argument);
+    orderBook.AddOrder(sellorder9);
+
+    std::vector<Trade> expectedTrades = {
+        {1, 11, 100, 5, /* timestamp not compared */}
+    };
+
+    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    //ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    //check every field in the structure if it is the same
+    for (size_t i = 0; i < expectedTrades.size(); ++i) {
+        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    }
+}
 
 
 

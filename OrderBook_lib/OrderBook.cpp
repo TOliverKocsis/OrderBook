@@ -50,26 +50,38 @@
                 break;
             }
         }
-
     }
 
 
 OrderBook::OrderBook(){
-    // Constructor implementation
+        // Constructor implementation
+        OrderIDTracker = 0; //track max order id so far, to keep the rule of increasing order numbers during a day
 }
 
 
 void OrderBook::AddOrder(Order order){
-    if (order.ordertype == OrderType::buy){
-        bids_db[order.orderId] = order; //add to hashmap for quick lookup and modification
-        int price = order.price;
-        int orderid = order.orderId;  //uniq identifier of this order
-        bids_level.push(std::make_pair(price, orderid)); //add pair of [pricepoint, orderId] quick lookup of best price
-    }
-    if (order.ordertype == OrderType::sell){
-        asks_db[order.orderId] = order;
-        asks_level.push(std::make_pair(order.price, order.orderId));
-    }
+        if(order.quantity < 1) {
+            throw std::invalid_argument("Quantity must be more than zero.");
+        }
+        if(order.orderId <= OrderIDTracker) {
+            throw std::invalid_argument("Order ID must be increasing and uniq number.");
+        }
+        if(order.price < 1) {
+            throw std::invalid_argument("Price must be more than zero.");
+        }
+        if(order.ordertype == OrderType::undefined){return;}  //chose to simply ignore undefined orders
+
+        OrderIDTracker = std::max(OrderIDTracker, order.orderId);
+        if (order.ordertype == OrderType::buy){
+            bids_db[order.orderId] = order; //add to hashmap for quick lookup and modification
+            uint32_t price = order.price;
+            uint32_t orderid = order.orderId;  //uniq identifier of this order
+            bids_level.push(std::make_pair(price, orderid)); //add pair of [pricepoint, orderId] for quick lookup of best price
+        }
+        if (order.ordertype == OrderType::sell){
+            asks_db[order.orderId] = order;
+            asks_level.push(std::make_pair(order.price, order.orderId));
+        }
         //after adding new pricepoint, run processing to see if we can fulfill any orders
         ProcessOrders();
 }

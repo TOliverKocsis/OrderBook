@@ -16,13 +16,15 @@
 class OrderBook{
 
 private:
-    std::unordered_map<int, Order> bids_db; //orderid -> Order struct
-    std::unordered_map<int, Order> asks_db;
+    std::unordered_map<uint32_t, Order> bids_db; //orderid -> Order struct
+    std::unordered_map<uint32_t, Order> asks_db;
 
     std::priority_queue<std::pair<int, int>> bids_level; //first:price second:orderid
     std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<> > asks_level; //price -> orderid, min heap
 
     std::vector<Trade> trades;  //simulate and record trades, used for testing
+
+    uint32_t OrderIDTracker;
 
 public:
 
