@@ -1,2 +1,2 @@
 # OrderBook
-A simple example OrdeBook implmenetation in C++ for study purposes.
+A simple example order book implementation in C++ for study purposes.
