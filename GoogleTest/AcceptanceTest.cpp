@@ -151,12 +151,11 @@ TEST(ProcessOrdersTestSuit, LevelsDontMatch) {
     */
 
     Order buyorder1{OrderType::buy, 1, 100, 5};
-    Order sellorder2{OrderType::sell, 2, 100, 5};
+    Order buyorder2{OrderType::buy, 2, 99, 5};
+    Order buyorder3{OrderType::buy, 3, 98, 99};
+    Order buyorder4{OrderType::buy, 4, 1, 1};
 
-    Order buyorder3{OrderType::buy, 3, 99, 5};
-    Order buyorder4{OrderType::buy, 4, 98, 99};
-    Order buyorder5{OrderType::buy, 5, 1, 1};
-
+    Order sellorder5{OrderType::sell, 5, 100, 5};
     Order sellorder6{OrderType::sell, 6, 100, 5};
     Order sellorder7{OrderType::sell, 7, 101, 99};
     Order sellorder8{OrderType::sell, 8, 1000, 1};
@@ -164,16 +163,16 @@ TEST(ProcessOrdersTestSuit, LevelsDontMatch) {
 
     OrderBook orderBook;
     orderBook.AddOrder(buyorder1);
+    orderBook.AddOrder(buyorder2);
     orderBook.AddOrder(buyorder3);
     orderBook.AddOrder(buyorder4);
-    orderBook.AddOrder(buyorder5);
-    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder5);
     orderBook.AddOrder(sellorder6);
     orderBook.AddOrder(sellorder7);
     orderBook.AddOrder(sellorder8);
 
     std::vector<Trade> expectedTrades = {
-        {1, 2, 100, 5, /* timestamp not compared */}
+        {1, 5, 100, 5, /* timestamp not compared */}
     };
 
     const std::vector<Trade>& actualTrades = orderBook.getTrades();
@@ -230,6 +229,70 @@ TEST(ProcessOrdersTestSuit, IncorrectInput) {
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
         EXPECT_EQ(expectedTrades[i], actualTrades[i]);
     }
+}
+
+TEST(ProcessOrdersTestSuit, CancelOneOrder) {
+    /*
+     * Make an order, but cancel it, then a matching order comes, but since we cancel no trade shall happen
+     */
+
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order sellorder1{OrderType::sell, 2, 100, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.CancelOrderbyId(buyorder1.orderId);
+    orderBook.AddOrder(sellorder1);
+    orderBook.CancelOrderbyId(sellorder1.orderId);
+
+    std::vector<Trade> expectedTrades = {};
+
+    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    //check every field in the structure if it is the same
+    for (size_t i = 0; i < expectedTrades.size(); ++i) {
+        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    }
+}
+
+TEST(ProcessOrdersTestSuit, MultipleOrdersCancelOneOrder) {
+    /*
+    *  Add multiple orders, but only one trade could happen, that is canceled before the matching order,
+    *  therefore no trades should happen
+    */
+
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order buyorder2{OrderType::buy, 2, 99, 5};
+    Order buyorder3{OrderType::buy, 3, 98, 99};
+    Order buyorder4{OrderType::buy, 4, 1, 1};
+
+    Order sellorder5{OrderType::sell, 5, 100, 5};
+    Order sellorder6{OrderType::sell, 6, 100, 5};
+    Order sellorder7{OrderType::sell, 7, 101, 99};
+    Order sellorder8{OrderType::sell, 8, 1000, 1};
+
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.AddOrder(buyorder2);
+    orderBook.AddOrder(buyorder3);
+    orderBook.AddOrder(buyorder4);
+    orderBook.CancelOrderbyId(buyorder1.orderId);
+
+    orderBook.AddOrder(sellorder5);
+    orderBook.AddOrder(sellorder6);
+    orderBook.AddOrder(sellorder7);
+    orderBook.AddOrder(sellorder8);
+
+    std::vector<Trade> expectedTrades = {};
+
+    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    //check every field in the structure if it is the same
+    for (size_t i = 0; i < expectedTrades.size(); ++i) {
+        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    }
+
 }
 
 

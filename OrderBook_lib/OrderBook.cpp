@@ -9,7 +9,10 @@
 #include "Order.hpp"
 #include "OrderBook.hpp"
 
-    void OrderBook::ProcessOrders(){
+#include <stack>
+#include <utility>
+
+void OrderBook::ProcessOrders(){
 
         //TODO could this be done by another thread?
         while(!bids_level.empty() and !asks_level.empty()){
@@ -45,7 +48,7 @@
                 }
             }
             else{
-                //run until we order in the orderbook, and some were maching,
+                //run until we order in the orderbook, and some were matching,
                 //here we have no more levels to match
                 break;
             }
@@ -82,9 +85,66 @@ void OrderBook::AddOrder(Order order){
             asks_db[order.orderId] = order;
             asks_level.push(std::make_pair(order.price, order.orderId));
         }
-        //after adding new pricepoint, run processing to see if we can fulfill any orders
+        //after adding new price point, run processing to see if we can fulfill any orders
         ProcessOrders();
 }
+/*
+ * Cancel an order based on order id
+ */
+void OrderBook::CancelOrderbyId(uint32_t orderId) {
+        //check if we can see this orderid in either asks or bids
+        if(bids_db.contains(orderId)) {
+            //todo this is O(N+logN), not ideal,  O(1) avg cancellation would be preferred
+            //where N is the number of orders in the db(memory), deeper the order in the book is worse
+            //todo if we have some constant level info that needs to be updated
+
+            //make a stack and dig out the order we need from the prioQ, then put them back
+            std::stack<std::pair<int,int>> bids_stack;
+            auto bid = bids_level.top();
+            bids_level.pop();
+            bids_stack.push(bid);
+
+            while(bids_stack.top().second != orderId) {
+                bid = bids_level.top();
+                bids_level.pop();
+                bids_stack.push(bid);
+            }
+            //found bid, and its on stack top now, already removed from prioq
+            bids_stack.pop(); //removed now
+            while(!bids_stack.empty()) {
+                //re add all the orders to the prioq
+                bid = bids_stack.top();
+                bids_stack.pop();
+                bids_level.push(bid);
+            }
+            bids_db.erase(orderId);
+            return;
+        }
+
+        if(asks_db.contains(orderId)) {
+            //make a stack and dig out the order we need from the prioQ
+            std::stack<std::pair<int,int>> asks_stack;
+            auto ask = asks_level.top();
+            asks_level.pop();
+            asks_stack.push(ask);
+
+            while(asks_stack.top().second != orderId) {
+                ask = asks_level.top();
+                asks_level.pop();
+                asks_stack.push(ask);
+            }
+            //found bid, and its on stack top now, already removed from prioq
+            asks_stack.pop(); //removed now
+            while(!asks_stack.empty()) {
+                //re add all the orders to the prioq
+                ask = asks_stack.top();
+                asks_stack.pop();
+                asks_level.push(ask);
+            }
+            asks_db.erase(orderId);
+        }
+}
+
 
 void printTrade(const Trade& trade) {
         std::cout << "Trade executed: BuyOrderID: " << trade.buyOrderId

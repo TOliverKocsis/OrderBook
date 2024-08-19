@@ -38,7 +38,7 @@ public:
     //void operator=(OrderBook&&) = delete;
 
     void AddOrder(Order order);
-    void CancelOrder(Order order);
+    void CancelOrderbyId(uint32_t orderId);
     void ProcessOrders();
     void ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double price, uint32_t quantity);
     //void displayOrderbook();
