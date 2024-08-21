@@ -41,8 +41,8 @@ public:
     void CancelOrderbyId(uint32_t orderId);
     void ProcessOrders();
     void ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double price, uint32_t quantity);
-    //void displayOrderbook();
-    std::vector<Trade>& getTrades();
+    std::vector<Trade>& GetTrades();
+    std::pair<uint32_t, uint32_t> GetBestBidWithQuantity();
 
 };
 

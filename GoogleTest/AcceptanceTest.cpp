@@ -23,7 +23,7 @@ TEST(ProcessOrdersTestSuit, ExactBuyAndSell) {
         {1, 2, 100, 5, /* timestamp not compared */}
     };
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -50,7 +50,7 @@ TEST(ProcessOrdersTestSuit, ExactBuyAndSellDifferentAmount) {
         {1, 2, 105, 7, /* timestamp not compared */}
     };
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -92,7 +92,7 @@ TEST(ProcessOrdersTestSuit, BuyOrderForNewAndRemainingSell) {
     // Sell order id 5 happens before 4, because it has a lower price, and lower price is checked first
     // in the current implementation.
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -137,7 +137,7 @@ TEST(ProcessOrdersTestSuit, SellOrderFulfilledForRemainder) {
         {5, 4, 119, 1, /* timestamp not compared */},
     };
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -175,7 +175,7 @@ TEST(ProcessOrdersTestSuit, LevelsDontMatch) {
         {1, 5, 100, 5, /* timestamp not compared */}
     };
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -223,7 +223,7 @@ TEST(ProcessOrdersTestSuit, IncorrectInput) {
         {1, 11, 100, 5, /* timestamp not compared */}
     };
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     //ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -247,7 +247,7 @@ TEST(ProcessOrdersTestSuit, CancelOneOrder) {
 
     std::vector<Trade> expectedTrades = {};
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
@@ -286,13 +286,72 @@ TEST(ProcessOrdersTestSuit, MultipleOrdersCancelOneOrder) {
 
     std::vector<Trade> expectedTrades = {};
 
-    const std::vector<Trade>& actualTrades = orderBook.getTrades();
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
         EXPECT_EQ(expectedTrades[i], actualTrades[i]);
     }
+}
 
+TEST(ProcessOrdersTestSuit, getBestBidTest) {
+    /*
+     *  Checks if GetBestBidWithQuantity function returns correct bid price and quantity
+     */
+
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order buyorder2{OrderType::buy, 2, 100, 5};
+    Order buyorder3{OrderType::buy, 3, 100, 5};
+    Order buyorder4{OrderType::buy, 4, 100, 5};
+    Order buyorder5{OrderType::buy, 5, 100, 5};
+    Order buyorder6{OrderType::buy, 6, 100, 15}; //price: 100, quantity: 40 overall
+    Order buyorder7{OrderType::buy, 7, 99, 1000};
+    Order buyorder8{OrderType::buy, 7, 99, 1000};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.AddOrder(buyorder2);
+    orderBook.AddOrder(buyorder3);
+    orderBook.AddOrder(buyorder4);
+    orderBook.AddOrder(buyorder5);
+    orderBook.AddOrder(buyorder6);
+    orderBook.AddOrder(buyorder7);
+
+    std::pair<int, int> bidinfo =  orderBook.GetBestBidWithQuantity();
+    std::pair<int, int> expectedBidinfo = {100, 40};
+
+    EXPECT_EQ(bidinfo, expectedBidinfo);
+}
+
+TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
+    /*
+     *  Checks if GetBestBidWithQuantity function returns correct bid price and quantity
+     *  difference to previous test, there is only one level in the orderbook
+     *  to test if we are not trying to access a prioq (or other datastructures) that is empty
+     *  and causing segfault.
+     */
+
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order buyorder2{OrderType::buy, 2, 100, 5};
+    Order buyorder3{OrderType::buy, 3, 100, 5};
+    Order buyorder4{OrderType::buy, 4, 100, 5};
+    Order buyorder5{OrderType::buy, 5, 100, 5};
+    Order buyorder6{OrderType::buy, 6, 100, 15}; //price: 100, quantity: 40 overall
+
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.AddOrder(buyorder2);
+    orderBook.AddOrder(buyorder3);
+    orderBook.AddOrder(buyorder4);
+    orderBook.AddOrder(buyorder5);
+    orderBook.AddOrder(buyorder6);
+
+
+    std::pair<int, int> bidinfo =  orderBook.GetBestBidWithQuantity();
+    std::pair<int, int> expectedBidinfo = {100, 40};
+
+    EXPECT_EQ(bidinfo, expectedBidinfo);
 }
 
 

@@ -159,4 +159,35 @@ void OrderBook::ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double p
         printTrade(trade);
     }
 
-std::vector<Trade>& OrderBook::getTrades(){return trades;}
+std::vector<Trade>& OrderBook::GetTrades(){return trades;}
+
+/*
+ * Return pair of Price and Quantity
+ * If there are multiple bids on the same price (same level) their quantites are added together
+ */
+std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
+
+    int bidPrice = bids_level.top().first;
+    int bidLevelQuantity = 0;
+
+    //now need to check if we have more quantity on this level
+    //again a not ideal way, we need to pop from the tree O(logN) and put it to the stack until we see same prices
+    //but go ahead with implementation for measuring performance, and comparing it to better implementations
+    std::stack<std::pair<int,int>> bidsStackSave;
+
+    while(!bids_level.empty() and bids_level.top().first == bidPrice) {
+        auto nextBid = bids_level.top();
+        bids_level.pop(); //removed
+        bidsStackSave.push(nextBid); //saved
+        bidLevelQuantity += bids_db[nextBid.second].quantity;
+    }
+    //the bids_level prioq top is now different price, or empty
+    //now push back all the stack
+    while(!bidsStackSave.empty()) {
+        auto nextBid = bidsStackSave.top();
+        bidsStackSave.pop();
+        bids_level.push(nextBid); //push back to prioQ to keep previous state
+    }
+    return std::make_pair(bidPrice, bidLevelQuantity);
+
+}
