@@ -354,5 +354,118 @@ TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
     EXPECT_EQ(bidinfo, expectedBidinfo);
 }
 
+TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices) {
+    /*
+     *  Checks if GetVolumeBetweenPrices function returns correct ask quantity between two price points
+     */
+
+    Order sellorder1{OrderType::sell, 1, 10, 5};
+    Order sellorder2{OrderType::sell, 2, 11, 10};
+    Order sellorder3{OrderType::sell, 3, 12, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
+
+    int askQuantityInfo =  orderBook.GetVolumeBetweenPrices(10, 11);
+    int expectedAskQuantityInfo = 15;
+
+    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+}
+
+TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_WrongInput) {
+    /*
+     *  Checks if GetVolumeBetweenPrices function returns zero in case of wrong inputs
+     */
+
+    Order sellorder1{OrderType::sell, 1, 10, 5};
+    Order sellorder2{OrderType::sell, 2, 11, 10};
+    Order sellorder3{OrderType::sell, 3, 12, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
+
+    int askQuantityInfo =  orderBook.GetVolumeBetweenPrices(11, 10); //start>end wrong input
+    int expectedAskQuantityInfo = 0;
+
+    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+}
+
+
+TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_BottomOfList) {
+    /*
+     *  Checks if GetVolumeBetweenPrices return correct volume if we ask for an amount at the bottom of the list
+     */
+
+    Order sellorder1{OrderType::sell, 1, 10, 5};
+    Order sellorder2{OrderType::sell, 2, 11, 10};
+    Order sellorder3{OrderType::sell, 3, 12, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
+
+    int askQuantityInfo =  orderBook.GetVolumeBetweenPrices(12, 12); //start>end wrong input
+    int expectedAskQuantityInfo = 5;
+
+    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+}
+
+
+//todo also check if the pushing back all the orders was correct
+TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_OrdersCorrectAfter) {
+    /*
+     *  Checks if GetVolumeBetweenPrices return correct volume if we ask for an amount at the bottom of the list,
+     *  and that orders were correctly pushed in afterward, and trades happen as expected.
+     *  Also check here when the start price is smaller than the lowest ask.
+     */
+
+    Order sellorder1{OrderType::sell, 1, 10, 10};
+    Order sellorder2{OrderType::sell, 2, 10, 10};
+    Order sellorder3{OrderType::sell, 3, 12, 5};
+    Order sellorder4{OrderType::sell, 4, 12, 5};
+    Order sellorder5{OrderType::sell, 5, 13, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
+    orderBook.AddOrder(sellorder4);
+    orderBook.AddOrder(sellorder5);
+
+    //Check 3 different prices
+    int askQuantityInfo =  orderBook.GetVolumeBetweenPrices(13, 13); //start>end wrong input
+    int expectedAskQuantityInfo = 5;
+    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+
+    int askQuantityInfo2 =  orderBook.GetVolumeBetweenPrices(12, 12); //start>end wrong input
+    int expectedAskQuantityInfo2 = 10;
+    EXPECT_EQ(askQuantityInfo2, expectedAskQuantityInfo2);
+
+    int askQuantityInfo3 =  orderBook.GetVolumeBetweenPrices(5, 15); //start>end wrong input
+    int expectedAskQuantityInfo3 = 35;
+    EXPECT_EQ(askQuantityInfo3, expectedAskQuantityInfo3);
+
+    //check if trade happens as expected after asking volumes
+    Order buyorder1{OrderType::buy, 6, 10, 100};
+    orderBook.AddOrder(buyorder1);
+
+    std::vector<Trade> expectedTrades = {
+        {6, 1, 10, 10, /* timestamp not compared */},
+        {6, 2, 10, 10, /* timestamp not compared */}
+    };
+
+    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
+    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    //check every field in the structure if it is the same
+    for (size_t i = 0; i < expectedTrades.size(); ++i) {
+        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    }
+
+}
 
 

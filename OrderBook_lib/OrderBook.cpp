@@ -88,6 +88,8 @@ void OrderBook::AddOrder(Order order){
         //after adding new price point, run processing to see if we can fulfill any orders
         ProcessOrders();
 }
+
+
 /*
  * Cancel an order based on order id
  */
@@ -153,13 +155,16 @@ void printTrade(const Trade& trade) {
                   << " for quantity " << trade.quantity << std::endl;
     }
 
+
 void OrderBook::ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double price, uint32_t quantity) {
         Trade trade = {buyOrderId, sellOrderId, price, quantity, std::chrono::system_clock::now()};
         trades.push_back(trade);
         printTrade(trade);
     }
 
+
 std::vector<Trade>& OrderBook::GetTrades(){return trades;}
+
 
 /*
  * Return pair of Price and Quantity
@@ -177,8 +182,8 @@ std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
 
     while(!bids_level.empty() and bids_level.top().first == bidPrice) {
         auto nextBid = bids_level.top();
-        bids_level.pop(); //removed
-        bidsStackSave.push(nextBid); //saved
+        bids_level.pop();
+        bidsStackSave.push(nextBid);
         bidLevelQuantity += bids_db[nextBid.second].quantity;
     }
     //the bids_level prioq top is now different price, or empty
@@ -189,5 +194,49 @@ std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
         bids_level.push(nextBid); //push back to prioQ to keep previous state
     }
     return std::make_pair(bidPrice, bidLevelQuantity);
+}
 
+
+/*
+ * Returns the quantity of ask orders between start and end input values both being inclusive
+ */
+uint32_t OrderBook::GetVolumeBetweenPrices(uint32_t start, uint32_t end) {
+    //todo again this is very inefficient: O(nlogn) time and O(N) space where N is the depth in the ask prioq
+    uint32_t volume = 0;
+    if(start > end) {return 0;}
+    //if the first ask price, so lowest, is already lower than end value, quantity will be zero
+    if(asks_level.top().first > end) {return 0;}
+
+    std::stack<std::pair<int,int>> asksStackSave;
+    while(!asks_level.empty() and start > asks_level.top().first) { //BUG todo what if start value is much smaller??
+        //save until we arrive to the price we do want to process
+        auto nextAsk = asks_level.top();
+        asks_level.pop();
+        asksStackSave.push(nextAsk);
+    }
+    //if we ended up searching until asks level is empty, we put back from stack and ret
+    if(asks_level.empty()) {
+        while(!asksStackSave.empty()) {
+            auto nextAskSave = asksStackSave.top();
+            asksStackSave.pop();
+            asks_level.push(nextAskSave);
+        }
+        return 0;
+    }
+    //if prioq is not empty and prev while loop stopped it means we are at a price where current top = start
+    //so we search until the price is out of range, or prioq empty
+    while(!asks_level.empty() and asks_level.top().first <= end) {
+        auto nextAsk = asks_level.top();
+        asks_level.pop();
+        asksStackSave.push(nextAsk);
+        volume += asks_db[nextAsk.second].quantity;
+    }
+    //put back examined orders
+    while(!asksStackSave.empty()) {
+        auto nextAskSave = asksStackSave.top();
+        asksStackSave.pop();
+        asks_level.push(nextAskSave);
+    }
+
+    return volume;
 }

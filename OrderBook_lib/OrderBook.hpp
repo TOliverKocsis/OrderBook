@@ -20,7 +20,7 @@ private:
     std::unordered_map<uint32_t, Order> asks_db;
 
     std::priority_queue<std::pair<int, int>> bids_level; //first:price second:orderid
-    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<> > asks_level; //price -> orderid, min heap
+    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<> > asks_level; //first:price second:orderid, min heap
 
     std::vector<Trade> trades;  //simulate and record trades, used for testing
 
@@ -43,6 +43,7 @@ public:
     void ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double price, uint32_t quantity);
     std::vector<Trade>& GetTrades();
     std::pair<uint32_t, uint32_t> GetBestBidWithQuantity();
+    uint32_t GetVolumeBetweenPrices(uint32_t start, uint32_t end);
 
 };
 
