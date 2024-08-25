@@ -15,15 +15,19 @@ OrderType stringToOrderType(const std::string& str) {
 }
 
 /*
- * Load orders from a csv file if the file exists/
- * csv file must be in the OrderType,OrderId,Price,Quantity
- * order. Copy all to a vector of Order type, and return it.
+ * Load the simulated traffic: order messages from a the .csv file created by the DataGenerator.py to a vector
+ *
+ * todo: When multi threading added, use a ring queue for continues read write, that would solve memory bottleneck.
+ *  If the size of queue would be fixed, it would be only written when there is space in it, instead of filling
+ *  memory until it can, and then start processing.
+ * todo: known issue: this loads everything to the memory, that might get full and crash if the csv file is too big
  */
-std::vector<Order> loadOrdersFromCSV(const std::string& filename) {
-    std::vector<Order> orders;
+std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
+    std::vector<OrderMessage> orderMessages;
     std::ifstream file(filename);
 
     if (file.is_open()) {
+        std::cout << "Example Dataset opened " << filename << std::endl;
         std::string line;
         // skip the header
         std::getline(file, line);
@@ -31,62 +35,61 @@ std::vector<Order> loadOrdersFromCSV(const std::string& filename) {
         while (std::getline(file, line)) {
             std::string word;
             std::stringstream ss(line);
-            Order order;
-            std::string orderTypeStr;
+            OrderMessage nextOrderMsg;
+            std::string orderMessageTypeStr;
 
-            std::getline(ss, orderTypeStr, ',');
-            order.ordertype = stringToOrderType(orderTypeStr);
+            std::getline(ss, orderMessageTypeStr, ',');
+            if(orderMessageTypeStr == "CancelOrder") {
+                //for cancel order we fill the Order msg type and order id, other fields will not be used
+                nextOrderMsg.orderMessageType = OrderMessageType::cancelOrder;
 
-            std::getline(ss, word, ',');
-            order.orderId = std::stoi(word);
+                std::getline(ss, word, ',');
+                nextOrderMsg.order.orderId = std::stoi(word);
+            }
+            else { // orderMessageTypeStr == "AddOrder"
+                nextOrderMsg.orderMessageType = OrderMessageType::addOrder;
 
-            std::getline(ss, word, ',');
-            order.price = std::stoi(word);
+                //fill out the Order part of the Order Message struct
+                std::getline(ss, word, ',');
+                nextOrderMsg.order.orderId = std::stoi(word);
 
-            std::getline(ss, word, ',');
-            order.quantity = std::stoi(word);
+                std::getline(ss, word, ',');
+                nextOrderMsg.order.ordertype = stringToOrderType(word);
 
-            orders.push_back(order);
+                std::getline(ss, word, ',');
+                nextOrderMsg.order.price = std::stoi(word);
+
+                std::getline(ss, word, ',');
+                nextOrderMsg.order.quantity = std::stoi(word);
+            }
+            orderMessages.push_back(nextOrderMsg);
         }
         file.close();
     }
+    else {
+        std::cout << "Example Dataset File open failed " << filename << std::endl;
+    }
 
-    return orders;
+    return orderMessages;
 }
 
-/*void saveTradesToCSV(const std::string& filename, const std::vector<Trade>& trades) {
-    std::ofstream file(filename);
-
-    if (file.is_open()) {
-        //add header
-        file << "BuyOrderId,SellOrderId,Price,Quantity\n";
-        for (const auto& trade : trades) {
-            file << trade.buyOrderId << ',' << trade.sellOrderId << ',' << trade.price << ',' << trade.quantity << '\n';
-        }
-        file.close();
-    }
-}*/
-
 int main() {
-    //using main as the a test function for now
 
-    //acceptance test
-    //load orders from csv file
-    std::vector<Order> orders = loadOrdersFromCSV("../OrderExamples/AcceptanceOrders.csv");
-
+    std::vector<OrderMessage> orderMessageFeed = loadOrdersFromCSV("../ExampleOrderDataset/ExampleDataset.csv");
     OrderBook orderBook;
 
-    for(const Order acceptanceOrder: orders) {
-        orderBook.AddOrder(acceptanceOrder);
+    std::cout << "Starting processing of: "<< orderMessageFeed.size() << " order messages" << std::endl;
+
+    //todo multithreading, consume feed from queue
+    for(OrderMessage nextOrderMsg : orderMessageFeed) {
+        if(nextOrderMsg.orderMessageType == OrderMessageType::cancelOrder) {
+            orderBook.CancelOrderbyId(nextOrderMsg.order.orderId);
+        }
+        if(nextOrderMsg.orderMessageType == OrderMessageType::addOrder) {
+            orderBook.AddOrder(nextOrderMsg.order);
+        }
     }
 
-
-    // Perform operations on the order book
-    // Order Ids uniq and autoincremented during a day
-    Order buyorder1{OrderType::buy, 1, 100, 10};
-    Order sellorder1{OrderType::sell, 2, 105, 10};
-    orderBook.AddOrder(buyorder1);
-    orderBook.AddOrder(sellorder1);
-
+    std::cout << "Processing finished, trades recorded: " << orderBook.GetTrades().size() << std::endl;
     return 0;
 }

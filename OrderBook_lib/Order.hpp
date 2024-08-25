@@ -21,5 +21,17 @@ struct Order {
     uint32_t quantity{};
 };
 
+enum class OrderMessageType
+{
+    undefined,
+    addOrder,
+    cancelOrder,
+};
+
+struct OrderMessage {
+    OrderMessageType orderMessageType{OrderMessageType::undefined};
+    Order order;
+};
+
 
 #endif //ORDER_HPP
