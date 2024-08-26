@@ -12,3 +12,4 @@ add_subdirectory(OrderBook_lib)
 target_link_libraries(OrderBook_run OrderBook_lib)
 
 add_subdirectory(GoogleTest)
+add_subdirectory(GoogleBenchmark)
