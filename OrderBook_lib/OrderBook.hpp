@@ -31,11 +31,11 @@ public:
 
     OrderBook();
 
-    //prevent copying and moving
-    //Orderbook(const OrderBook&) = delete;
-    //void operator=(const OrderBook&) = delete;
-    //OrderBook(OrderBook&&) = delete;
-    //void operator=(OrderBook&&) = delete;
+    //prevent OrderBook copying and moving
+    OrderBook(const OrderBook&) = delete;
+    void operator=(const OrderBook&) = delete;
+    OrderBook(OrderBook&&) = delete;
+    void operator=(OrderBook&&) = delete;
 
     void AddOrder(Order order);
     void CancelOrderbyId(uint32_t orderId);
