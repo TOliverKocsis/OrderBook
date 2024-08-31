@@ -3,9 +3,7 @@
 #include "OrderBook.hpp"
 #include <random>
 
-/*  This Google Benchmark file is for measuring separate function execution times.
- */
-
+/*  This Google Benchmark file is for measuring separate function execution times. */
 
 /*
  *  Micro Benchmark Addorder Test 1:
@@ -238,6 +236,7 @@ static void BM_GetAskVolume_askDB_(benchmark::State &state) {
     }
 }
 
+
 //Add Order Benchmarks
 BENCHMARK(BM_AddOrder_same_price);
 BENCHMARK(BM_AddOrder_RandomPrice_Range_3);
@@ -253,5 +252,5 @@ BENCHMARK(BM_GetBestBid_bidDB_)->RangeMultiplier(10)->Range(100, 100000);
 //Get Ask Volume between Prices Benchmarks
 BENCHMARK(BM_GetAskVolume_askDB_)->RangeMultiplier(10)->Range(100, 100000);
 
-
+//Init and run all BENCHMARK macro registered cases
 BENCHMARK_MAIN();
