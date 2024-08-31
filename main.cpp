@@ -46,7 +46,7 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
                 std::getline(ss, word, ',');
                 nextOrderMsg.order.orderId = std::stoi(word);
             }
-            else { // orderMessageTypeStr == "AddOrder"
+            else if(orderMessageTypeStr == "AddOrder") {
                 nextOrderMsg.orderMessageType = OrderMessageType::addOrder;
 
                 //fill out the Order part of the Order Message struct
@@ -62,6 +62,25 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
                 std::getline(ss, word, ',');
                 nextOrderMsg.order.quantity = std::stoi(word);
             }
+            else if(orderMessageTypeStr == "GetBestBid") {
+                nextOrderMsg.orderMessageType = OrderMessageType::getBestBid;
+            }
+            else if(orderMessageTypeStr == "GetAskVolumeBetweenPrices") {
+                nextOrderMsg.orderMessageType = OrderMessageType::getAskVolumeBetweenPrices;
+
+                /* todo:
+                 * Since we use a static placement opf variables, but GetAsk.. does not have most of the values,
+                 * we need to skip multiple fields, until we get to the end. This is not ideal, and the csv could be
+                 * separated into diff csv files, but anyway real data planned be used, so decided to not focus on this
+                 * for now*/
+                do {
+                    std::getline(ss, word, ',');  // skip empty lines
+                }while(word.empty());
+                nextOrderMsg.lowerPrice = std::stoi(word);
+                std::getline(ss, word, ',');
+                nextOrderMsg.upperPrice = std::stoi(word);
+            }
+
             orderMessages.push_back(nextOrderMsg);
         }
         file.close();
@@ -74,22 +93,35 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
 }
 
 int main() {
-
     std::vector<OrderMessage> orderMessageFeed = loadOrdersFromCSV("../ExampleOrderDataset/ExampleDataset.csv");
-    OrderBook orderBook;
-
     std::cout << "Starting processing of: "<< orderMessageFeed.size() << " order messages" << std::endl;
+
+    OrderBook orderBook;
+    uint32_t debug_dummy_volume_ask = 0;
+    uint32_t debug_dummy_volume_bid = 0;
 
     //todo multithreading, consume feed from queue
     for(OrderMessage nextOrderMsg : orderMessageFeed) {
         if(nextOrderMsg.orderMessageType == OrderMessageType::cancelOrder) {
             orderBook.CancelOrderbyId(nextOrderMsg.order.orderId);
         }
-        if(nextOrderMsg.orderMessageType == OrderMessageType::addOrder) {
+        else if(nextOrderMsg.orderMessageType == OrderMessageType::addOrder) {
             orderBook.AddOrder(nextOrderMsg.order);
+        }
+        // Make sure compiler does not optimize out these unused values by volatile flag (during benchmark where no dummy)
+        else if(nextOrderMsg.orderMessageType == OrderMessageType::getBestBid) {
+            volatile std::pair<int, int> mypair = orderBook.GetBestBidWithQuantity();
+            debug_dummy_volume_bid += mypair.second;
+        }
+        else if(nextOrderMsg.orderMessageType == OrderMessageType::getAskVolumeBetweenPrices) {
+            volatile uint32_t askVolume = orderBook.GetVolumeBetweenPrices(nextOrderMsg.lowerPrice, nextOrderMsg.upperPrice);
+            debug_dummy_volume_ask += askVolume;
         }
     }
 
     std::cout << "Processing finished, trades recorded: " << orderBook.GetTrades().size() << std::endl;
+    std::cout <<  "Returned ask volume: " << debug_dummy_volume_ask << std::endl;
+    std::cout <<  "Returned bid volume: " << debug_dummy_volume_bid << std::endl;
+
     return 0;
 }

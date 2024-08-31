@@ -26,11 +26,17 @@ enum class OrderMessageType
     undefined,
     addOrder,
     cancelOrder,
+    getBestBid,
+    getAskVolumeBetweenPrices
 };
 
+// To handle ExampleDataset.csv lines
 struct OrderMessage {
     OrderMessageType orderMessageType{OrderMessageType::undefined};
     Order order;
+    // Add fields for GetBestBid and GetAskVolumeBetweenPrices
+    int lowerPrice{0};  // For GetAskVolumeBetweenPrices
+    int upperPrice{0};  // For GetAskVolumeBetweenPrices
 };
 
 

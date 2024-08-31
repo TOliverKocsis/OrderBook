@@ -35,7 +35,7 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
     std::ifstream file(filename);
 
     if (file.is_open()) {
-        //std::cout << "Example Dataset opened " << filename << std::endl;
+        std::cout << "Example Dataset opened " << filename << std::endl;
         std::string line;
         // skip the header
         std::getline(file, line);
@@ -54,7 +54,7 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
                 std::getline(ss, word, ',');
                 nextOrderMsg.order.orderId = std::stoi(word);
             }
-            else { // orderMessageTypeStr == "AddOrder"
+            else if(orderMessageTypeStr == "AddOrder") {
                 nextOrderMsg.orderMessageType = OrderMessageType::addOrder;
 
                 //fill out the Order part of the Order Message struct
@@ -70,12 +70,31 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
                 std::getline(ss, word, ',');
                 nextOrderMsg.order.quantity = std::stoi(word);
             }
+            else if(orderMessageTypeStr == "GetBestBid") {
+                nextOrderMsg.orderMessageType = OrderMessageType::getBestBid;
+            }
+            else if(orderMessageTypeStr == "GetAskVolumeBetweenPrices") {
+                nextOrderMsg.orderMessageType = OrderMessageType::getAskVolumeBetweenPrices;
+
+                /* todo:
+                 * Since we use a static placement opf variables, but GetAsk.. does not have most of the values,
+                 * we need to skip multiple fields, until we get to the end. This is not ideal, and the csv could be
+                 * separated into diff csv files, but anyway real data planned be used, so decided to not focus on this
+                 * for now*/
+                do {
+                    std::getline(ss, word, ',');  // skip empty lines
+                }while(word.empty());
+                nextOrderMsg.lowerPrice = std::stoi(word);
+                std::getline(ss, word, ',');
+                nextOrderMsg.upperPrice = std::stoi(word);
+            }
+
             orderMessages.push_back(nextOrderMsg);
         }
         file.close();
     }
     else {
-        //std::cout << "Example Dataset File open failed " << filename << std::endl;
+        std::cout << "Example Dataset File open failed " << filename << std::endl;
     }
 
     return orderMessages;
@@ -84,20 +103,29 @@ std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
 /*
  *  Benchmark simulated dataset processing, with message feed reading.
  *  Later when multithreading is included, this might work faster.
- *
  */
 static void BM_LoadAndExecuteMessages_singlethread(benchmark::State &state) {
 
     for (auto _: state) {
         OrderBook orderBook;
-        std::vector<OrderMessage> orderMessageFeed = loadOrdersFromCSV("../../ExampleOrderDataset/ExampleDataset.csv");
+        benchmark::DoNotOptimize(orderBook);
+        std::vector<OrderMessage> orderMessageFeed =
+            loadOrdersFromCSV("../../ExampleOrderDataset/ExampleDataset.csv");
 
         for(OrderMessage nextOrderMsg : orderMessageFeed) {
             if(nextOrderMsg.orderMessageType == OrderMessageType::cancelOrder) {
                 orderBook.CancelOrderbyId(nextOrderMsg.order.orderId);
             }
-            if(nextOrderMsg.orderMessageType == OrderMessageType::addOrder) {
+            else if(nextOrderMsg.orderMessageType == OrderMessageType::addOrder) {
                 orderBook.AddOrder(nextOrderMsg.order);
+            }
+            // Make sure compiler does not optimize out these unused values by volatile flag
+            else if(nextOrderMsg.orderMessageType == OrderMessageType::getBestBid) {
+                volatile std::pair<uint32_t, uint32_t> mypair = orderBook.GetBestBidWithQuantity();
+            }
+            else if(nextOrderMsg.orderMessageType == OrderMessageType::getAskVolumeBetweenPrices) {
+                volatile uint32_t askVolume =
+                    orderBook.GetVolumeBetweenPrices(nextOrderMsg.lowerPrice, nextOrderMsg.upperPrice);
             }
         }
     }
