@@ -354,6 +354,18 @@ TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
     EXPECT_EQ(bidinfo, expectedBidinfo);
 }
 
+TEST(ProcessOrdersTestSuit, getBestBidTest_NoVolume) {
+    /*
+     *  Checks if GetBestBidWithQuantity function returns 0 in case bid database is empty
+     */
+
+    OrderBook orderBook;
+
+    std::pair<uint32_t, uint32_t> bidinfo =  orderBook.GetBestBidWithQuantity();
+    std::pair<uint32_t, uint32_t> expectedBidinfo = {0, 0};
+
+    EXPECT_EQ(bidinfo, expectedBidinfo);
+}
 TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices) {
     /*
      *  Checks if GetVolumeBetweenPrices function returns correct ask quantity between two price points
@@ -387,6 +399,20 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_WrongInput) {
     orderBook.AddOrder(sellorder1);
     orderBook.AddOrder(sellorder2);
     orderBook.AddOrder(sellorder3);
+
+    int askQuantityInfo =  orderBook.GetVolumeBetweenPrices(11, 10); //start>end wrong input
+    int expectedAskQuantityInfo = 0;
+
+    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+}
+
+
+TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_NoAsk) {
+    /*
+     *  Checks if GetVolumeBetweenPrices function returns zero in case of empty ask database
+     */
+
+    OrderBook orderBook;
 
     int askQuantityInfo =  orderBook.GetVolumeBetweenPrices(11, 10); //start>end wrong input
     int expectedAskQuantityInfo = 0;

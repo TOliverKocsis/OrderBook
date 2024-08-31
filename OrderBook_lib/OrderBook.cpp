@@ -180,6 +180,8 @@ std::vector<Trade>& OrderBook::GetTrades(){return trades;}
  */
 std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
 
+    if(bids_level.empty()) {return std::make_pair(0, 0);}
+
     int bidPrice = bids_level.top().first;
     int bidLevelQuantity = 0;
 
@@ -209,6 +211,8 @@ std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
  * Returns the quantity of ask orders between start and end input values both being inclusive
  */
 uint32_t OrderBook::GetVolumeBetweenPrices(uint32_t start, uint32_t end) {
+    if(asks_level.empty()) {return 0;}
+
     //todo again this is very inefficient: O(nlogn) time and O(N) space where N is the depth in the ask prioq
     uint32_t volume = 0;
     if(start > end) {return 0;}
