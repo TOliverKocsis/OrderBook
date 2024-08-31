@@ -12,6 +12,13 @@
 #include <stack>
 #include <utility>
 
+// Preprocessor macro definitions
+#ifdef ENABLE_DEBUG_PRINTS
+    #define DEBUG_PRINT(x) std::cout << x << std::endl;
+#else
+    #define DEBUG_PRINT(x) do {} while (0)
+#endif
+
 void OrderBook::ProcessOrders(){
 
         //TODO could this be done by another thread?
@@ -149,10 +156,11 @@ void OrderBook::CancelOrderbyId(uint32_t orderId) {
 
 
 void printTrade(const Trade& trade) {
-        std::cout << "Trade executed: BuyOrderID: " << trade.buyOrderId
+    //debug print controlled by Cmake flag to disable print during benchmark(/"release")
+        DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buyOrderId
                   << " with SellOrderID: " << trade.sellOrderId
                   << " at price " << trade.price
-                  << " for quantity " << trade.quantity << std::endl;
+                  << " for quantity " << trade.quantity << std::endl);
     }
 
 

@@ -3,6 +3,9 @@ project(OrderBook)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# Define the macro for regular builds
+# add_compile_definitions(ENABLE_DEBUG_PRINTS) #todo bug: being used for google benchmark runs also
+
 set(SOURCE_FILES main.cpp)
 add_executable(OrderBook_run ${SOURCE_FILES})
 
