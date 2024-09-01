@@ -6,34 +6,11 @@
 /*  This Google Benchmark file is for measuring separate function execution times. */
 
 /*
- *  Micro Benchmark Addorder Test 1:
- *  Adding the same order. For the prioQ database version, adding the same price is probably slower,
- *  so have more test where the price changes.
- *  Order db empty at start.
+ *  Benchmark AddOrder:
+ *  Measure Asymptotic Complexity of Adding an order with random prices, with random prices range of 10,
+ *  while having N Orders already added to OrderBook.
  */
-static void BM_AddOrder_same_price(benchmark::State &state) {
-    OrderBook orderBook;
-    int orderID = 1;
-    Order buyOrder = {OrderType::buy, 1, 100, 5};
-
-    for (auto _: state) {
-        //Pausing and resuming timing seem to have a huge overhead compared to AddOrder that ruins result
-        //state.PauseTiming();
-        buyOrder.orderId = ++orderID;
-        benchmark::DoNotOptimize(orderBook);
-        //state.ResumeTiming();
-
-        orderBook.AddOrder(buyOrder);
-    }
-}
-
-
-/*
- *  Micro Benchmark Addorder Test 2:
- *  Adding an order with random prices every iter, with range of prices in 3.
- *  Order db empty at start.
- */
-static void BM_AddOrder_RandomPrice_Range_3(benchmark::State &state) {
+static void BM_AddOrder_PriceRange_3(benchmark::State &state) {
     OrderBook orderBook;
     int orderID = 1;
     Order buyOrder = {OrderType::buy, 1, 100, 5};
@@ -44,51 +21,33 @@ static void BM_AddOrder_RandomPrice_Range_3(benchmark::State &state) {
     std::uniform_int_distribution<> priceDistrib(99, 101);  // Price range: keep stock price stable: RANGE: 3
     std::uniform_int_distribution<> quantityDistrib(50, 5000); // Define quantity range
 
-    for (auto _: state) {
-        buyOrder.orderId = ++orderID;
+    //preload Orderbook DB
+    for(int i=0; i< state.range(0); i++) {
+        orderBook.AddOrder(buyOrder);
+        //update id and price
+        orderID++;
+        buyOrder.orderId = orderID;
         buyOrder.price = priceDistrib(gen);
         buyOrder.quantity = quantityDistrib(gen);
-
-        orderBook.AddOrder(buyOrder);
-
-        benchmark::DoNotOptimize(orderBook);
     }
-}
-
-
-/*
- *  Micro Benchmark Addorder Test 3:
- *  Increase the price range to 10.
- *  Order db empty at start.
- */
-static void BM_AddOrder_RandomPrice_Range_10(benchmark::State &state) {
-    OrderBook orderBook;
-    int orderID = 1;
-    Order buyOrder = {OrderType::buy, 1, 100, 5};
-
-    // Random number generators
-    std::random_device rd;  // Random seed
-    std::mt19937 gen(rd()); // Mersenne Twister engine
-    std::uniform_int_distribution<> priceDistrib(95, 104);  // Price range: RANGE increased to 10
-    std::uniform_int_distribution<> quantityDistrib(50, 5000); // Define quantity range
 
     for (auto _: state) {
         buyOrder.orderId = ++orderID;
         buyOrder.price = priceDistrib(gen);
         buyOrder.quantity = quantityDistrib(gen);
-
         orderBook.AddOrder(buyOrder);
-
         benchmark::DoNotOptimize(orderBook);
     }
+    state.SetComplexityN(state.range(0));
 }
 
 
 /*
- *  Micro Benchmark Addorder Test 4:
- *  Increase the price range to 10 Order db has 10k size at the benchmark start.
+ *  Benchmark AddOrder:
+ *  Measure Asymptotic Complexity of Adding an order with random prices, with random prices range of 10,
+ *  while having N Orders already added to OrderBook.
  */
-static void BM_AddOrder_RandomPrice_Range_10_DB10k(benchmark::State &state) {
+static void BM_AddOrder_PriceRange_10(benchmark::State &state) {
     OrderBook orderBook;
     int orderID = 1;
     Order buyOrder = {OrderType::buy, 1, 100, 5};
@@ -100,7 +59,7 @@ static void BM_AddOrder_RandomPrice_Range_10_DB10k(benchmark::State &state) {
     std::uniform_int_distribution<> quantityDistrib(50, 5000); // Define quantity range
 
     //preload Orderbook DB
-    for(int i=0; i< 1000; i++) {
+    for(int i=0; i< state.range(0); i++) {
         orderBook.AddOrder(buyOrder);
 
         //update id and price
@@ -114,21 +73,20 @@ static void BM_AddOrder_RandomPrice_Range_10_DB10k(benchmark::State &state) {
         buyOrder.orderId = ++orderID;
         buyOrder.price = priceDistrib(gen);
         buyOrder.quantity = quantityDistrib(gen);
-
         orderBook.AddOrder(buyOrder);
-
         benchmark::DoNotOptimize(orderBook);
     }
+    state.SetComplexityN(state.range(0));
 }
 
 
 /*
- *  Micro Benchmark Cancel Order:
- *  Adding 1 Order, then cancel a RANDOM order, while having a preloaded amount
- *  of Orders. The amount changes with test input benchmark::state: 100 1k 10k 100k amount of preloaded orders in the
- *  db, before we start adding, then canceling a random Order.
+ *  Benchmark Cancel Order Asymptotic Complexity:
+ *  Measure Asymptotic Complexity of adding 1 Order, then cancel a RANDOM order, while having N preloaded amount
+ *  of Orders. Reason to add an order is to not run out of Orders during test execution.
+ *
  */
-static void BM_Cancel1_Random_Order_DB_(benchmark::State &state) {
+static void BM_Add1_Cancel1_Random_Order(benchmark::State &state) {
     OrderBook orderBook;
     std::vector<int> OrderIDs(state.range(0), 0);  //save the id to know which one to cancel
 
@@ -168,14 +126,16 @@ static void BM_Cancel1_Random_Order_DB_(benchmark::State &state) {
         orderBook.CancelOrderbyId(randomOrderID);
         benchmark::DoNotOptimize(orderBook);
     }
+
+    state.SetComplexityN(state.range(0));
 }
 
+
 /*
- *  Micro Benchmark Get Best Bid 1
- *  Price Range of preloaded messages matters, since if less orders are on present on the best level
- *  less orders needs to be collected. (At least for current implementation)
+ *  Benchmark Get Best Bid:
+ *  Measure Asymptotic Complexity of get best bid price and quantity of it, while having N orders in the Orderbook.
  */
-static void BM_GetBestBid_bidDB_(benchmark::State &state) {
+static void BM_GetBestBid_bid(benchmark::State &state) {
     OrderBook orderBook;
 
     // Random number generators
@@ -201,14 +161,15 @@ static void BM_GetBestBid_bidDB_(benchmark::State &state) {
         benchmark::DoNotOptimize(orderBook);
         orderBook.GetBestBidWithQuantity();
     }
+    state.SetComplexityN(state.range(0));
 }
 
 
 /*
- *  Micro Benchmark Get Ask Volume Between Prices
- *
+ *  Benchmark Get Ask Volume Between Prices
+ *  Measure Asymptotic Complexity of Get Ask Volume Between Prices, while having N orders in the Orderbook.
  */
-static void BM_GetAskVolume_askDB_(benchmark::State &state) {
+static void BM_GetAskVolumeBetweenPrices(benchmark::State &state) {
     OrderBook orderBook;
 
     // Random number generators
@@ -231,26 +192,25 @@ static void BM_GetAskVolume_askDB_(benchmark::State &state) {
 
     for (auto _: state) {
         //Benchmark loop
-        benchmark::DoNotOptimize(orderBook);
         orderBook.GetVolumeBetweenPrices(99, 100);
+        benchmark::DoNotOptimize(orderBook);
     }
+    state.SetComplexityN(state.range(0));
 }
 
 
 //Add Order Benchmarks
-BENCHMARK(BM_AddOrder_same_price);
-BENCHMARK(BM_AddOrder_RandomPrice_Range_3);
-BENCHMARK(BM_AddOrder_RandomPrice_Range_10);
-BENCHMARK(BM_AddOrder_RandomPrice_Range_10_DB10k);
+BENCHMARK(BM_AddOrder_PriceRange_3)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
+BENCHMARK(BM_AddOrder_PriceRange_10)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Cancel Order Benchmarks
-BENCHMARK(BM_Cancel1_Random_Order_DB_)->RangeMultiplier(10)->Range(100, 100000);
+BENCHMARK(BM_Add1_Cancel1_Random_Order)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Get Best Bid Benchmarks
-BENCHMARK(BM_GetBestBid_bidDB_)->RangeMultiplier(10)->Range(100, 100000);
+BENCHMARK(BM_GetAskVolumeBetweenPrices)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Get Ask Volume between Prices Benchmarks
-BENCHMARK(BM_GetAskVolume_askDB_)->RangeMultiplier(10)->Range(100, 100000);
+BENCHMARK(BM_GetAskVolumeBetweenPrices)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Init and run all BENCHMARK macro registered cases
 BENCHMARK_MAIN();
