@@ -135,7 +135,7 @@ static void BM_Add1_Cancel1_Random_Order(benchmark::State &state) {
  *  Benchmark Get Best Bid:
  *  Measure Asymptotic Complexity of get best bid price and quantity of it, while having N orders in the Orderbook.
  */
-static void BM_GetBestBid_bid(benchmark::State &state) {
+static void BM_GetBestBid(benchmark::State &state) {
     OrderBook orderBook;
 
     // Random number generators
@@ -207,7 +207,7 @@ BENCHMARK(BM_AddOrder_PriceRange_10)->RangeMultiplier(2)->Range(1<<10, 1<<18)->C
 BENCHMARK(BM_Add1_Cancel1_Random_Order)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Get Best Bid Benchmarks
-BENCHMARK(BM_GetAskVolumeBetweenPrices)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
+BENCHMARK(BM_GetBestBid)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Get Ask Volume between Prices Benchmarks
 BENCHMARK(BM_GetAskVolumeBetweenPrices)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
