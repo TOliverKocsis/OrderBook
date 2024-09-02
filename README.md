@@ -13,27 +13,27 @@ ExampleDataset.csv.
 <summary> Description of files and libraries </summary>
 
 ### DatasetCreator
-A python script that creates a .csv file, that simulates incoming order messages to theOrderBook.
-Messages include: 
+This Python script generates a `.csv` file that simulates incoming order messages to the `OrderBook`. The messages include:
 - Add Order
 - Cancel Order
 - Get Best Bid
 - Get Ask Volume Between Prices
 
-The price of orders randomly changes with biases to have an upward and downward trend, buy they move closely together to
-trigger large amount of trades.
+The prices of orders are subject to random fluctuations, with biases designed to create upward and downward trends.
+However, prices remain closely correlated to facilitate a significant volume of trades.
+
 
 <img src="ExampleOrderDataset/buynsell_price_plot.png" title="Price Changes for Buy and Sell Orders" alt=""/>
 
 ### Google Test
-Google Test unit test framework is used to test correct execution of functions. AcceptanceTest.cpp contains all testcases.
+The Google Test framework is employed to verify the correct execution of functions.
+All test cases are contained within `AcceptanceTest.cpp`.
 
 ### Google Benchmark
-Google Benchmark framework is used to measure performance. 
-Dataset_process_benchmark measures the execution time 
-of the main.cpp function, that loads the ExampleDataset.csv then executes on the 
-incoming order messages (add/cancel/bestBid/askVol). 
-OrderBook_benchmark measures the asymptotic complexity of the 4 functions.
+The Google Benchmark framework is utilized to measure performance. The `Dataset_process_benchmark` measures the 
+execution time of the `main.cpp` function, which loads the `ExampleDataset.csv` and processes the incoming order 
+messages (add/cancel/bestBid/askVol). The `OrderBook_benchmark` assesses the asymptotic complexity of the four 
+primary functions.
 
 ### OrderBook_lib
 The Orderbook source files
