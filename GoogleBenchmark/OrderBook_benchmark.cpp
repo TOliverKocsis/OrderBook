@@ -47,7 +47,7 @@ static void BM_AddOrder_PriceRange_3(benchmark::State &state) {
  *  Measure Asymptotic Complexity of Adding an order with random prices, with random prices range of 10,
  *  while having N Orders already added to OrderBook.
  */
-static void BM_AddOrder_PriceRange_10(benchmark::State &state) {
+static void BM_AddOrder_PriceRange_20(benchmark::State &state) {
     OrderBook orderBook;
     int orderID = 1;
     Order buyOrder = {OrderType::buy, 1, 100, 5};
@@ -55,7 +55,7 @@ static void BM_AddOrder_PriceRange_10(benchmark::State &state) {
     // Random number generators
     std::random_device rd;  // Random seed
     std::mt19937 gen(rd()); // Mersenne Twister engine
-    std::uniform_int_distribution<> priceDistrib(95, 104);  // Price range: RANGE increased to 10
+    std::uniform_int_distribution<> priceDistrib(95, 114);  // Price range: RANGE increased to 20
     std::uniform_int_distribution<> quantityDistrib(50, 5000); // Define quantity range
 
     //preload Orderbook DB
@@ -93,7 +93,7 @@ static void BM_Add1_Cancel1_Random_Order(benchmark::State &state) {
     // Random number generators
     std::random_device rd;  // Random seed
     std::mt19937 gen(rd()); // Mersenne Twister engine
-    std::uniform_int_distribution<> priceDistrib(99, 101);  // Price range: keep stock price stable: RANGE: 3
+    std::uniform_int_distribution<> priceDistrib(100, 119);  // Price range: keep stock price stable: RANGE: 20
     std::uniform_int_distribution<> quantityDistrib(50, 5000); // Define quantity range
     std::uniform_int_distribution<> randomIDindex(0, OrderIDs.size() - 1); // define the range
 
@@ -112,7 +112,7 @@ static void BM_Add1_Cancel1_Random_Order(benchmark::State &state) {
 
 
     for (auto _: state) {
-        //Added overhead of pausing and resuming timer, could be ignored as the Cancel order time is awful at the moment
+        //Added overhead of pausing and resuming timer
         state.PauseTiming();
         buyOrder.orderId = ++orderID;
         orderBook.AddOrder(buyOrder); //keep adding orders so that we keep the 10k size
@@ -129,7 +129,6 @@ static void BM_Add1_Cancel1_Random_Order(benchmark::State &state) {
 
     state.SetComplexityN(state.range(0));
 }
-
 
 /*
  *  Benchmark Get Best Bid:
@@ -201,7 +200,7 @@ static void BM_GetAskVolumeBetweenPrices(benchmark::State &state) {
 
 //Add Order Benchmarks
 BENCHMARK(BM_AddOrder_PriceRange_3)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
-BENCHMARK(BM_AddOrder_PriceRange_10)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
+BENCHMARK(BM_AddOrder_PriceRange_20)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();
 
 //Cancel Order Benchmarks
 BENCHMARK(BM_Add1_Cancel1_Random_Order)->RangeMultiplier(2)->Range(1<<10, 1<<18)->Complexity();

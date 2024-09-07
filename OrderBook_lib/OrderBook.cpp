@@ -20,47 +20,50 @@
 #endif
 
 void OrderBook::ProcessOrders(){
+    //todo could this be done by another thread
+    while(!bids_level.empty() and !asks_level.empty()){
+        uint32_t best_bid = GetBestBid();
+        uint32_t best_ask = GetBestAsk();
+        if (best_bid >= best_ask){
+            Level& bidLevel = bids_level.begin()->second;
+            Level& askLevel = asks_level.begin()->second;
+            Order& bidOrder = bids_level.begin()->second.ordersList.front();
+            Order& askOrder = asks_level.begin()->second.ordersList.front();
 
-        //TODO could this be done by another thread?
-        while(!bids_level.empty() and !asks_level.empty()){
-            auto best_bid = bids_level.top();
-            auto best_ask = asks_level.top();
-            if (best_bid.first >= best_ask.first){
-                //fulfill the order if levels are in line
+            //handle amounts traded
+            uint32_t traded_amount = std::min(bidOrder.quantity, askOrder.quantity);
 
-                Order& bid_order = bids_db[best_bid.second];
-                Order& ask_order = asks_db[best_ask.second];
+            //reduce quantity of trade of both ask and bid, and their Level
+            uint32_t new_bid_quantity = bidOrder.quantity - traded_amount;
+            bidLevel.quantity -= traded_amount;
+            bidOrder.quantity=new_bid_quantity;
 
-                //handle amounts traded
-                int traded_amount = std::min(bid_order.quantity, ask_order.quantity);
+            uint32_t new_ask_quantity = askOrder.quantity - traded_amount;
+            askLevel.quantity -= traded_amount;
+            askOrder.quantity=new_ask_quantity;
 
-                //reduce quantity of trade of both ask and bid by the smaller amount
-                uint32_t new_bid_quantity = bid_order.quantity - traded_amount;
-                bid_order.quantity=new_bid_quantity;
+            //simulate order processing
+            ExecuteTrade(bidOrder.orderId, askOrder.orderId, askOrder.price, traded_amount);
 
-                uint32_t new_ask_quantity = ask_order.quantity - traded_amount;
-                ask_order.quantity=new_ask_quantity;
-
-                //simulate order processing
-                ExecuteTrade(bid_order.orderId, ask_order.orderId, bid_order.price, traded_amount);
-
-                //remove the order from the orderbook, that has no quantity left
-                if (bid_order.quantity == 0){
-                    bids_db.erase(bid_order.orderId);
-                    bids_level.pop();
-                }
-                if (ask_order.quantity == 0){
-                    asks_db.erase(ask_order.orderId);
-                    asks_level.pop();
+            //remove the order from the orderbook, that has no quantity left
+            if (bidOrder.quantity == 0){
+                bids_db.erase(bidOrder.orderId);  //1. remove from hashmap
+                bidLevel.ordersList.pop_front();  //2. remove from linked list
+                if(bidLevel.quantity < 1) {       //3. remove empty Level from map
+                    bids_level.erase(bidLevel.price);
                 }
             }
-            else{
-                //run until we order in the orderbook, and some were matching,
-                //here we have no more levels to match
-                break;
+            if (askOrder.quantity == 0){
+                asks_db.erase(askOrder.orderId);  //1. remove from hashmap
+                askLevel.ordersList.pop_front();  //2. remove from linked list
+                if(askLevel.quantity < 1) {       //3. remove empty Level from map
+                    asks_level.erase(askLevel.price);
+                }
             }
         }
+        else{break;}//no orders to match
     }
+}
 
 
 OrderBook::OrderBook(){
@@ -82,15 +85,29 @@ void OrderBook::AddOrder(Order order){
         if(order.ordertype == OrderType::undefined){return;}  //chose to simply ignore undefined orders
 
         OrderIDTracker = std::max(OrderIDTracker, order.orderId);
+        uint32_t price = order.price;
         if (order.ordertype == OrderType::buy){
-            bids_db[order.orderId] = order; //add to hashmap for quick lookup and modification
-            uint32_t price = order.price;
-            uint32_t orderid = order.orderId;  //uniq identifier of this order
-            bids_level.push(std::make_pair(price, orderid)); //add pair of [pricepoint, orderId] for quick lookup of best price
+            if(!bids_level.contains(price)) {
+                Level newPriceLevel;    //price is new, so add price level to bin search tree (map)
+                newPriceLevel.price = price;
+                bids_level[price] = newPriceLevel;
+            }
+            bids_level[price].quantity += order.quantity;
+            order.parentLevel = &bids_level[price];
+            //Note: measured insert vs emplace_back and push_back, insert ~30 ns faster
+            auto it = bids_level[price].ordersList.insert(bids_level[price].ordersList.end(), order);
+            bids_db[order.orderId] = it;
         }
         if (order.ordertype == OrderType::sell){
-            asks_db[order.orderId] = order;
-            asks_level.push(std::make_pair(order.price, order.orderId));
+            if(!asks_level.contains(price)) {
+                Level newPriceLevel;    //price is new, so add price level to bin search tree (map)
+                newPriceLevel.price = price;
+                asks_level[price] = newPriceLevel;
+            }
+            asks_level[price].quantity += order.quantity;
+            order.parentLevel = &asks_level[price];
+            auto it = asks_level[price].ordersList.insert(asks_level[price].ordersList.end(), order);
+            asks_db[order.orderId] = it;
         }
         //after adding new price point, run processing to see if we can fulfill any orders
         ProcessOrders();
@@ -103,54 +120,27 @@ void OrderBook::AddOrder(Order order){
 void OrderBook::CancelOrderbyId(uint32_t orderId) {
         //check if we can see this orderid in either asks or bids
         if(bids_db.contains(orderId)) {
-            //todo this is O(N+logN), not ideal,  O(1) avg cancellation would be preferred
-            //where N is the number of orders in the db(memory), deeper the order in the book is worse
-            //todo if we have some constant level info that needs to be updated
-
-            //make a stack and dig out the order we need from the prioQ, then put them back
-            std::stack<std::pair<int,int>> bids_stack;
-            auto bid = bids_level.top();
-            bids_level.pop();
-            bids_stack.push(bid);
-
-            while(bids_stack.top().second != orderId) {
-                bid = bids_level.top();
-                bids_level.pop();
-                bids_stack.push(bid);
-            }
-            //found bid, and its on stack top now, already removed from prioq
-            bids_stack.pop(); //removed now
-            while(!bids_stack.empty()) {
-                //re add all the orders to the prioq
-                bid = bids_stack.top();
-                bids_stack.pop();
-                bids_level.push(bid);
-            }
+            auto listIt = bids_db[orderId];     //get list iterator from hashmap
+            Order& delTargetOrder = *listIt;                   //dereference it to get the Order struct
+            Level& refLevel = *delTargetOrder.parentLevel;     //get a Level pointer from Order struct
+            refLevel.ordersList.erase(listIt);               //remove from linkedlist pointer(=list::iterator)
             bids_db.erase(orderId);
+            refLevel.quantity -= delTargetOrder.quantity;      //reduce quantity
+            if(refLevel.quantity < 1) {
+                bids_level.erase(refLevel.price);              //remove empty Level from map
+            }
             return;
         }
-
         if(asks_db.contains(orderId)) {
-            //make a stack and dig out the order we need from the prioQ
-            std::stack<std::pair<int,int>> asks_stack;
-            auto ask = asks_level.top();
-            asks_level.pop();
-            asks_stack.push(ask);
-
-            while(asks_stack.top().second != orderId) {
-                ask = asks_level.top();
-                asks_level.pop();
-                asks_stack.push(ask);
-            }
-            //found bid, and its on stack top now, already removed from prioq
-            asks_stack.pop(); //removed now
-            while(!asks_stack.empty()) {
-                //re add all the orders to the prioq
-                ask = asks_stack.top();
-                asks_stack.pop();
-                asks_level.push(ask);
-            }
+            auto listIt = asks_db[orderId];     //get list iterator from hashmap
+            Order& delTargetOrder = *listIt;                   //dereference it to get the Order struct
+            Level& refLevel = *delTargetOrder.parentLevel;     //get a Level pointer from Order struct
+            refLevel.ordersList.erase(listIt);               //remove from linkedlist pointer(=list::iterator)
             asks_db.erase(orderId);
+            refLevel.quantity -= delTargetOrder.quantity;      //reduce quantity
+            if(refLevel.quantity < 1) {
+                asks_level.erase(refLevel.price);              //remove empty Level from map
+            }
         }
 }
 
@@ -173,37 +163,22 @@ void OrderBook::ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double p
 
 std::vector<Trade>& OrderBook::GetTrades(){return trades;}
 
-
 /*
  * Return pair of Price and Quantity
  * If there are multiple bids on the same price (same level) their quantites are added together
  */
 std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
-
     if(bids_level.empty()) {return std::make_pair(0, 0);}
+    return std::make_pair(bids_level.begin()->first, bids_level.begin()->second.quantity);
+}
 
-    int bidPrice = bids_level.top().first;
-    int bidLevelQuantity = 0;
-
-    //now need to check if we have more quantity on this level
-    //again a not ideal way, we need to pop from the tree O(logN) and put it to the stack until we see same prices
-    //but go ahead with implementation for measuring performance, and comparing it to better implementations
-    std::stack<std::pair<int,int>> bidsStackSave;
-
-    while(!bids_level.empty() and bids_level.top().first == bidPrice) {
-        auto nextBid = bids_level.top();
-        bids_level.pop();
-        bidsStackSave.push(nextBid);
-        bidLevelQuantity += bids_db[nextBid.second].quantity;
-    }
-    //the bids_level prioq top is now different price, or empty
-    //now push back all the stack
-    while(!bidsStackSave.empty()) {
-        auto nextBid = bidsStackSave.top();
-        bidsStackSave.pop();
-        bids_level.push(nextBid); //push back to prioQ to keep previous state
-    }
-    return std::make_pair(bidPrice, bidLevelQuantity);
+/*
+ * Return pair of 1:Price and 2:Quantity
+ * If there are multiple bids on the same price (same level) their quantites are added together
+ */
+std::pair<uint32_t, uint32_t> OrderBook::GetBestAskWithQuantity(){
+    if(asks_level.empty()) {return std::make_pair(0, 0);}
+    return std::make_pair(asks_level.begin()->first, asks_level.begin()->second.quantity);
 }
 
 
@@ -212,43 +187,48 @@ std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
  */
 uint32_t OrderBook::GetVolumeBetweenPrices(uint32_t start, uint32_t end) {
     if(asks_level.empty()) {return 0;}
-
-    //todo again this is very inefficient: O(nlogn) time and O(N) space where N is the depth in the ask prioq
-    uint32_t volume = 0;
     if(start > end) {return 0;}
     //if the first ask price, so lowest, is already lower than end value, quantity will be zero
-    if(asks_level.top().first > end) {return 0;}
+    if(asks_level.begin()->first > end){return 0;}
 
-    std::stack<std::pair<int,int>> asksStackSave;
-    while(!asks_level.empty() and start > asks_level.top().first) { //BUG todo what if start value is much smaller??
-        //save until we arrive to the price we do want to process
-        auto nextAsk = asks_level.top();
-        asks_level.pop();
-        asksStackSave.push(nextAsk);
+    uint32_t volume = 0;
+    for(uint32_t curPriceCheck=start; curPriceCheck<end+1; curPriceCheck++) {
+        if(asks_level.contains(curPriceCheck)){volume+= asks_level[curPriceCheck].quantity;}
     }
-    //if we ended up searching until asks level is empty, we put back from stack and ret
-    if(asks_level.empty()) {
-        while(!asksStackSave.empty()) {
-            auto nextAskSave = asksStackSave.top();
-            asksStackSave.pop();
-            asks_level.push(nextAskSave);
-        }
-        return 0;
-    }
-    //if prioq is not empty and prev while loop stopped it means we are at a price where current top = start
-    //so we search until the price is out of range, or prioq empty
-    while(!asks_level.empty() and asks_level.top().first <= end) {
-        auto nextAsk = asks_level.top();
-        asks_level.pop();
-        asksStackSave.push(nextAsk);
-        volume += asks_db[nextAsk.second].quantity;
-    }
-    //put back examined orders
-    while(!asksStackSave.empty()) {
-        auto nextAskSave = asksStackSave.top();
-        asksStackSave.pop();
-        asks_level.push(nextAskSave);
-    }
-
     return volume;
+}
+
+unsigned long OrderBook::GetBidQuantity() {
+    unsigned long quantity=0;
+    for(auto const& mapPair: bids_level) {
+        quantity += mapPair.second.quantity;
+    }
+    return quantity;
+}
+
+unsigned long OrderBook::GetAskQuantity() {
+    unsigned long quantity=0;
+    for(auto const& mapPair: asks_level) {
+        quantity += mapPair.second.quantity;
+    }
+    return quantity;
+}
+
+uint32_t OrderBook::GetBestBid() {
+    if(bids_level.empty()){return 0;}
+    //todo Note: would it be faster if we only delete a empty levels if there are more then 20 empty levels for example?
+    //this would cause to be forced to skip some empty levels when searching for the next bid, making code bit more complex
+    //and with extra branching it would be slower for most cases?
+    //leaving empty levels would only help the cases when we keep adding then deleting levels
+    /*while(!bids_level.empty() and bids_level.begin()->second.quantity==0) {
+        //so while the map is not empty, and the top has zero quantity, purge the Level, as it causes slow down?
+        //or is it better to just always skip the empty levels?
+        bids_level.erase(bids_level.begin());
+    }*/
+    return bids_level.begin()->second.price;
+}
+
+uint32_t OrderBook::GetBestAsk() {
+    if(asks_level.empty()){return 0;}
+    return asks_level.begin()->second.price;
 }

@@ -7,6 +7,8 @@
 
 #include <cstdint> // defines uint32 type
 
+#include "Level.hpp"
+
 enum class OrderType
 {
     undefined,
@@ -14,11 +16,17 @@ enum class OrderType
     sell,
 };
 
+//forward declaration of Level for parentLevel*
+struct Level;
+
+
 struct Order {
     OrderType ordertype{OrderType::undefined};
     uint32_t orderId{};
     uint32_t price{};
     uint32_t quantity{};
+    Level* parentLevel{nullptr};
+    std::list<Order>::iterator listPosition;
 };
 
 enum class OrderMessageType

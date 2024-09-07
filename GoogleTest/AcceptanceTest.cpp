@@ -63,10 +63,7 @@ TEST(ProcessOrdersTestSuit, BuyOrderForNewAndRemainingSell) {
     /* Case 3: Test a buy order(6) that matches a new and a remaining sell order(4 and 5).
     * Buy Order ID 6 shall match Sell Order ID 4 remainder:3 at price:105, and Sell Order ID 5 (new)
     * at price 102, for 3 units, totaling the trade of 6 (3+3).
-    * So three trades should happen:
-    * 1. Trade same as previous test, buy id:3, sell id:4 price:105, quantity:7
-    * 2. Trade buy id:6, sell id:4, price: 110, quantity: 3
-    * 3. Trade buy id:6, sell id:5, price: 110, quantity: 3
+    * So three trades should happen.
     * Remainder: buy id 6, 6 units, price:110
      */
 
@@ -84,13 +81,10 @@ TEST(ProcessOrdersTestSuit, BuyOrderForNewAndRemainingSell) {
 
     std::vector<Trade> expectedTrades = {
         {3, 4, 105, 7, /* timestamp not compared */},
-        {6, 5, 110, 3, /* timestamp not compared */},
-        {6, 4, 110, 3, /* timestamp not compared */}
+        {6, 5, 102, 3, /* timestamp not compared */},
+        {6, 4, 105, 3, /* timestamp not compared */}
     };
-    //Note: if the buy order is at 110, it doesnt matter that the sell order was for 102 and 105,
-    // the buy price is used, not sure if this applies to real world.
-    // Sell order id 5 happens before 4, because it has a lower price, and lower price is checked first
-    // in the current implementation.
+    // Sell order id 5 happens before 4, because it has a lower price, and lower price coems first
 
     const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
@@ -104,17 +98,6 @@ TEST(ProcessOrdersTestSuit, BuyOrderForNewAndRemainingSell) {
 TEST(ProcessOrdersTestSuit, SellOrderFulfilledForRemainder) {
     /* Case4: Test if a sell order is fulfilled from a new and
      * remainder buy order.
-     * Trades that happen:
-     * Trade 1: fullfills sell order 1: buy id:2, sell id:1, price 120 quantity 10,
-     * closes sellorder1.
-     * Sellorder 4 causes two trades to happen: (buyorder3 first as it ahs higher price)
-     * Trade2: buy id3, sell id4, price:130, quantity 10
-     * now the remainder oif buyorder 2 of 20 quantity
-     * Trade3: buy id2, sell id4, price:120, quantity 20
-     *
-     * And a last trade just for 1 qauntity:
-     * Trade 5: buyid:5 sell id4, price 119, quantity1 (exact match price)
-     *
      */
 
     Order sellorder1{OrderType::sell, 1, 100, 10};
@@ -131,9 +114,9 @@ TEST(ProcessOrdersTestSuit, SellOrderFulfilledForRemainder) {
     orderBook.AddOrder(buyorder5);
 
     std::vector<Trade> expectedTrades = {
-        {2, 1, 120, 10, /* timestamp not compared */},
-        {3, 4, 130, 10, /* timestamp not compared */},
-        {2, 4, 120, 20, /* timestamp not compared */},
+        {2, 1, 100, 10, /* timestamp not compared */},
+        {3, 4, 119, 10, /* timestamp not compared */},
+        {2, 4, 119, 20, /* timestamp not compared */},
         {5, 4, 119, 1, /* timestamp not compared */},
     };
 
@@ -249,6 +232,9 @@ TEST(ProcessOrdersTestSuit, CancelOneOrder) {
 
     const std::vector<Trade>& actualTrades = orderBook.GetTrades();
     ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+
+    ASSERT_EQ(orderBook.GetBidQuantity(), 0);
+    ASSERT_EQ(orderBook.GetAskQuantity(), 0);
     //check every field in the structure if it is the same
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
         EXPECT_EQ(expectedTrades[i], actualTrades[i]);
@@ -306,7 +292,7 @@ TEST(ProcessOrdersTestSuit, getBestBidTest) {
     Order buyorder5{OrderType::buy, 5, 100, 5};
     Order buyorder6{OrderType::buy, 6, 100, 15}; //price: 100, quantity: 40 overall
     Order buyorder7{OrderType::buy, 7, 99, 1000};
-    Order buyorder8{OrderType::buy, 7, 99, 1000};
+    Order buyorder8{OrderType::buy, 8, 99, 1000};
 
     OrderBook orderBook;
     orderBook.AddOrder(buyorder1);
@@ -316,6 +302,7 @@ TEST(ProcessOrdersTestSuit, getBestBidTest) {
     orderBook.AddOrder(buyorder5);
     orderBook.AddOrder(buyorder6);
     orderBook.AddOrder(buyorder7);
+    orderBook.AddOrder(buyorder8);
 
     std::pair<int, int> bidinfo =  orderBook.GetBestBidWithQuantity();
     std::pair<int, int> expectedBidinfo = {100, 40};
@@ -323,12 +310,38 @@ TEST(ProcessOrdersTestSuit, getBestBidTest) {
     EXPECT_EQ(bidinfo, expectedBidinfo);
 }
 
+TEST(ProcessOrdersTestSuit, getBestAskTest) {
+    /*
+     *  Checks if GetBestAskWithQuantity function returns correct ask price and quantity
+     */
+
+    Order sellorder1{OrderType::sell, 1, 100, 5};
+    Order sellorder2{OrderType::sell, 2, 100, 5};
+    Order sellorder3{OrderType::sell, 3, 100, 5};
+    Order sellorder4{OrderType::sell, 4, 100, 5};
+    Order sellorder5{OrderType::sell, 5, 100, 5};
+    Order sellorder6{OrderType::sell, 6, 100, 15}; //price: 100, quantity: 40 overall
+    Order sellorder7{OrderType::sell, 7, 99, 1000};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
+    orderBook.AddOrder(sellorder4);
+    orderBook.AddOrder(sellorder5);
+    orderBook.AddOrder(sellorder6);
+    orderBook.AddOrder(sellorder7);
+
+    std::pair<uint32_t, uint32_t> askinfo =  orderBook.GetBestAskWithQuantity();
+    std::pair<uint32_t, uint32_t> expectedAskinfo = {99, 1000};
+
+    EXPECT_EQ(askinfo, expectedAskinfo);
+}
+
 TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
     /*
      *  Checks if GetBestBidWithQuantity function returns correct bid price and quantity
-     *  difference to previous test, there is only one level in the orderbook
-     *  to test if we are not trying to access a prioq (or other datastructures) that is empty
-     *  and causing segfault.
+     *  There is only one price.
      */
 
     Order buyorder1{OrderType::buy, 1, 100, 5};
@@ -338,7 +351,6 @@ TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
     Order buyorder5{OrderType::buy, 5, 100, 5};
     Order buyorder6{OrderType::buy, 6, 100, 15}; //price: 100, quantity: 40 overall
 
-
     OrderBook orderBook;
     orderBook.AddOrder(buyorder1);
     orderBook.AddOrder(buyorder2);
@@ -347,11 +359,37 @@ TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
     orderBook.AddOrder(buyorder5);
     orderBook.AddOrder(buyorder6);
 
-
     std::pair<int, int> bidinfo =  orderBook.GetBestBidWithQuantity();
     std::pair<int, int> expectedBidinfo = {100, 40};
 
     EXPECT_EQ(bidinfo, expectedBidinfo);
+}
+
+TEST(ProcessOrdersTestSuit, getBestAskTestWithOnlyOnePrice) {
+    /*
+     *  Checks if GetBestAskWithQuantity function returns correct ask price and quantity.
+     *  There is only one price.
+     */
+
+    Order sellorder1{OrderType::sell, 1, 100, 5};
+    Order sellorder2{OrderType::sell, 2, 100, 5};
+    Order sellorder3{OrderType::sell, 3, 100, 5};
+    Order sellorder4{OrderType::sell, 4, 100, 5};
+    Order sellorder5{OrderType::sell, 5, 100, 5};
+    Order sellorder6{OrderType::sell, 6, 100, 15}; //price: 100, quantity: 40 overall
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
+    orderBook.AddOrder(sellorder4);
+    orderBook.AddOrder(sellorder5);
+    orderBook.AddOrder(sellorder6);
+
+    std::pair<int, int> askinfo =  orderBook.GetBestAskWithQuantity();
+    std::pair<int, int> expectedAskinfo = {100, 40};
+
+    EXPECT_EQ(askinfo, expectedAskinfo);
 }
 
 TEST(ProcessOrdersTestSuit, getBestBidTest_NoVolume) {
@@ -366,6 +404,20 @@ TEST(ProcessOrdersTestSuit, getBestBidTest_NoVolume) {
 
     EXPECT_EQ(bidinfo, expectedBidinfo);
 }
+
+TEST(ProcessOrdersTestSuit, getBestAskTest_NoVolume) {
+    /*
+     *  Checks if GetBestBidWithQuantity function returns 0 in case bid database is empty
+     */
+
+    OrderBook orderBook;
+
+    std::pair<uint32_t, uint32_t> askinfo =  orderBook.GetBestAskWithQuantity();
+    std::pair<uint32_t, uint32_t> expectedAskinfo = {0, 0};
+
+    EXPECT_EQ(askinfo, expectedAskinfo);
+}
+
 TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices) {
     /*
      *  Checks if GetVolumeBetweenPrices function returns correct ask quantity between two price points
@@ -491,7 +543,38 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_OrdersCorrectAfter) {
     for (size_t i = 0; i < expectedTrades.size(); ++i) {
         EXPECT_EQ(expectedTrades[i], actualTrades[i]);
     }
+}
 
+TEST(ProcessOrdersTestSuit, GetBestBid) {
+    Order buyorder1{OrderType::buy, 1, 100, 5};
+    Order buyorder2{OrderType::buy, 2, 150, 5};
+    Order buyorder3{OrderType::buy, 3, 200, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.AddOrder(buyorder2);
+    orderBook.AddOrder(buyorder3);
+
+    uint32_t actualResult = orderBook.GetBestBid();
+    uint32_t expectedResult = 200;
+
+    ASSERT_EQ(actualResult, expectedResult);
+}
+
+TEST(ProcessOrdersTestSuit, GetBestAsk) {
+    Order askorder1{OrderType::sell, 1, 100, 5};
+    Order askorder2{OrderType::sell, 2, 150, 5};
+    Order askorder3{OrderType::sell, 3, 200, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(askorder1);
+    orderBook.AddOrder(askorder2);
+    orderBook.AddOrder(askorder3);
+
+    uint32_t actualResult = orderBook.GetBestAsk();
+    uint32_t expectedResult = 100;
+
+    ASSERT_EQ(actualResult, expectedResult);
 }
 
 
