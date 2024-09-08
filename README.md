@@ -54,8 +54,8 @@ This results in \(O(N \log N)\) time and \(O(N)\) space complexity, where N is t
 This design was implemented as an initial step to practice coding, set up the project, and focus on unit testing and benchmarking.
 
 ***
-### Benchmark results
-| Function                  | Time Complexity | RMS  |
+### Benchmark results of Version 1:
+| Test                      | Time Complexity | RMS  |
 |---------------------------|-----------------|------|
 | AddOrder_PriceRange_3     | 464.91 (1)      | 2 %  |
 | AddOrder_PriceRange_10    | 386.12 (1)      | 5 %  |
@@ -75,3 +75,62 @@ The other results align with expectations, showing \(O(N \log N)\) complexity fo
 as theoretically predicted.
 
 ***
+
+## Version 2: std::map + std::list
+
+### Version 2: `std::map` + `std::list`
+Version 2 focuses on optimizing data structures to improve the O(NlogN) time complexity associated with key operations,
+including retrieving the best bid, canceling orders, and querying ask volumes within a specified price range. 
+This design is motivated by insights from a notable blog post: [How to Build a Fast Limit Order Book](https://web.archive.org/web/20110219163448/http://howtohft.wordpress.com/2011/02/15/how-to-build-a-fast-limit-order-book/).
+
+In this implementation, each price level is represented by a `Level` object, which holds a bidirectional linked list
+(`std::list`) for holding orders. The price levels themselves are organized using a balanced binary search tree
+(`std::map`), ensuring logarithmic time complexity for insertion, cancellation, and lookup of price levels. 
+Due to the ordered nature of `std::map`, the best bid and best ask are always accessible at the boundaries, 
+allowing efficient retrieval of these values.
+To enable faster random cancellation of orders, a hash map is used to provide direct access to orders based on their 
+unique IDs. Each `Order` object maintains a reference to its parent `Level` and its position within the linked list. 
+As a result, once an order is located via the hash map in O(1) average time, its removal from the linked list becomes 
+an O(1) operation.
+
+### Benchmark results of Version 2:
+| Test                      | Time Complexity | RMS  | Time min - max [ns] |
+|---------------------------|-----------------|------|---------------------|
+| AddOrder_PriceRange_3     | 501.50 O(1)     | 4 %  | 473 - 553           |
+| AddOrder_PriceRange_20    | 671.34 O(1)     | 5 %  | 639 - 716           |
+| Add1_Cancel1_Random_Order | 41.7 O(lgN)     | 15 % | 478 - 857           |
+| GetAskVolumeBetweenPrices | 151.3 O(1)      | 1 %  | 149 - 152           |
+| GetBestBid                | 26.13 O(1)      | 2 %  | 25.3 - 27.2         |
+
+### Performance Results
+
+The results largely confirm the expected theoretical time complexities, with the exception of the 
+`Add1_Cancel1_Random_Order` test. This benchmark measures the time to cancel a random order, where the addition of an 
+order is not timed but included to maintain a consistent database size. 
+Most tests were conducted with database sizes ranging from 1,024 to 1 million entries, and the performance appears to be
+influenced by the lookup efficiency of the `std::unordered_map` data structure.
+
+For database sizes between 1,000 and 65,000 entries, the performance remains stable, with timings ranging from 461ns to 504ns. 
+However, as the database size increases, the following results are observed:
+- At 262,000 entries: 740ns
+- At 524,000 entries: 825ns
+- At 1 million entries: 857ns
+- At 4 million entries: 830ns
+- At 8 million entries: 926ns
+- At 33 million entries: 972ns
+
+While there appears to be some scaling effect up to 1 million entries—likely due to rehashing—the performance stabilizes
+between 524,000 and 4 million entries, around 830ns. At a database size of 8 million, the time increases to 926ns, 
+likely due to hardware limitations such as increased cache misses, as the cache cannot accommodate the next random ID.
+
+The CPU used for benchmarking has the following cache sizes:
+- **L1 Data**: 48 KiB (×6)
+- **L2 Unified**: 1280 KiB (×6)
+- **L3 Unified**: 18,432 KiB (×1)
+
+Based on these cache sizes, the estimated number of entries that can fit in each cache level is as follows:
+- **L1 Cache**: ~2,072 entries
+- **L2 Cache**: ~80,000 entries
+- **L3 Cache**: ~1.125 million entries
+
+
