@@ -78,7 +78,6 @@ as theoretically predicted.
 
 ## Version 2: std::map + std::list
 
-### Version 2: `std::map` + `std::list`
 Version 2 focuses on optimizing data structures to improve the O(NlogN) time complexity associated with key operations,
 including retrieving the best bid, canceling orders, and querying ask volumes within a specified price range. 
 This design is motivated by insights from a notable blog post: [How to Build a Fast Limit Order Book](https://web.archive.org/web/20110219163448/http://howtohft.wordpress.com/2011/02/15/how-to-build-a-fast-limit-order-book/).
@@ -118,6 +117,7 @@ However, as the database size increases, the following results are observed:
 - At 4 million entries: 830ns
 - At 8 million entries: 926ns
 - At 33 million entries: 972ns
+- At 134 million entries: 986ns
 
 While there appears to be some scaling effect up to 1 million entries—likely due to rehashing—the performance stabilizes
 between 524,000 and 4 million entries, around 830ns. At a database size of 8 million, the time increases to 926ns, 
