@@ -6,7 +6,7 @@ performance measurement techniques, with a specific focus on low-latency systems
 The OrderBook implementation provides core functionalities, including the ability to add and cancel orders,
 retrieve the best bid and ask prices, and compute the ask volume within specified price ranges.
 
-The project is thoroughly unit tested using the Google Test framework, with benchmarking and performance evaluations
+The project is thoroughly unit-tested using the Google Test framework, with benchmarking and performance evaluations
 conducted via Google Benchmark.
 
 The DatasetCreator/DataGenerator.py creates an ExampleDataset.csv that simulates incoming order messages.
@@ -17,14 +17,14 @@ Prices remain closely correlated to facilitate a large volume of trades.
 <img src="ExampleOrderDataset/buynsell_price_plot.png" title="Price Changes for Buy and Sell Orders" alt=""/>
 *Figure 1: Plot of prices created by the DataGenerator.py (plot by: PlotExampleDatasetPrice.py)
 
-The exampled dataset is processed by main.cpp that uses the Orderbook source files from OrderBook_lib.
+The example dataset is processed by main.cpp, which uses the Orderbook class from OrderBook_lib.
 
 # Version 1: std::priority_queue Implementation
 
 This design was developed as a foundational exercise to establish the project architecture,
 alongside unit testing and benchmarking capabilities.
 
-The initial phase of this project involved a methodical approach, beginning with the integration of order management
+The initial phase of this project involved a systematic approach, beginning with the integration of order management
 into the OrderBook class. For this purpose, I employed `std::priority_queue`, which facilitates constant-time retrieval
 of the optimal bid and ask prices—an essential feature for efficient trade execution. The bid and ask databases are
 implemented as priority queues, with max-heaps for bids and min-heaps for asks.
@@ -58,8 +58,7 @@ Testing was done on Ubuntu, with i5-12400F, 6cores, 4400Mhz. Cache sizes:
 </details>
 
 Tests executed with N in range 2<sup>10</sup> - 2<sup>20</sup>, where N is the database size. The Time column and
-AddOrder row
-therefore relates to Adding an order to a database that already contains N orders.
+AddOrder row therefore relates to adding an order to a database that already contains N orders.
 
 | Test                      | Time Complexity | RMS  |
 |---------------------------|-----------------|------|
