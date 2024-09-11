@@ -1,7 +1,7 @@
 # Introduction
 
-This repository presents a personal portfolio project, designed to demonstrate proficiency in C++, Python, CMake, and
-performance measurement techniques, with a specific focus on low-latency systems in the financial domain.
+This repository presents a personal portfolio project, to demonstrate proficiency in C++, Python, CMake, and
+performance measurement techniques, and an interest in low-latency systems and the financial domain.
 
 The OrderBook implementation provides core functionalities, including the ability to add and cancel orders,
 retrieve the best bid and ask prices, and compute the ask volume within specified price ranges.
