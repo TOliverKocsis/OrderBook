@@ -1,127 +1,109 @@
 #include <fstream>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <vector>
+
 #include "Order.hpp"
 #include "OrderBook.hpp"
-#include <iostream>
-#include <vector>
-#include <string>
-#include <sstream>
 
-
-OrderType stringToOrderType(const std::string& str) {
-    if (str == "buy") return OrderType::buy;
-    if (str == "sell") return OrderType::sell;
-    return OrderType::undefined;
+OrderType StringToOrderType(const std::string& str) {
+    if (str == "buy") return OrderType::BUY;
+    if (str == "sell") return OrderType::SELL;
+    return OrderType::UNDEFINED;
 }
 
 /*
- * Load the simulated traffic: order messages from a the .csv file created by the DataGenerator.py to a vector
- *
- * todo: When multi threading added, use a ring queue for continues read write, that would solve memory bottleneck.
- *  If the size of queue would be fixed, it would be only written when there is space in it, instead of filling
- *  memory until it can, and then start processing.
- * todo: known issue: this loads everything to the memory, that might get full and crash if the csv file is too big
+ * Load the simulated traffic: order messages from a the .csv file created by the DataGenerator.py to a vector.
  */
-std::vector<OrderMessage> loadOrdersFromCSV(const std::string& filename) {
-    std::vector<OrderMessage> orderMessages;
+std::vector<OrderMessage> LoadOrdersFromCSV(const std::string& filename) {
+    std::vector<OrderMessage> order_messages;
     std::ifstream file(filename);
 
     if (file.is_open()) {
         std::cout << "Example Dataset opened " << filename << std::endl;
         std::string line;
-        // skip the header
-        std::getline(file, line);
+        std::getline(file, line);  // skip the header
 
         while (std::getline(file, line)) {
             std::string word;
             std::stringstream ss(line);
-            OrderMessage nextOrderMsg;
-            std::string orderMessageTypeStr;
+            OrderMessage next_order_msg;
+            std::string order_message_type_str;
 
-            std::getline(ss, orderMessageTypeStr, ',');
-            if(orderMessageTypeStr == "CancelOrder") {
-                //for cancel order we fill the Order msg type and order id, other fields will not be used
-                nextOrderMsg.orderMessageType = OrderMessageType::cancelOrder;
-
-                std::getline(ss, word, ',');
-                nextOrderMsg.order.orderId = std::stoi(word);
-            }
-            else if(orderMessageTypeStr == "AddOrder") {
-                nextOrderMsg.orderMessageType = OrderMessageType::addOrder;
-
-                //fill out the Order part of the Order Message struct
-                std::getline(ss, word, ',');
-                nextOrderMsg.order.orderId = std::stoi(word);
+            std::getline(ss, order_message_type_str, ',');
+            if (order_message_type_str == "CancelOrder") {
+                // For cancel order we fill the Order msg type and order id, other fields will not be used.
+                next_order_msg.order_message_type = OrderMessageType::CANCEL_ORDER;
 
                 std::getline(ss, word, ',');
-                nextOrderMsg.order.ordertype = stringToOrderType(word);
+                next_order_msg.order.orderId = std::stoi(word);
+            } else if (order_message_type_str == "AddOrder") {
+                next_order_msg.order_message_type = OrderMessageType::ADD_ORDER;
+
+                // Fill out the Order part of the Order Message struct.
+                std::getline(ss, word, ',');
+                next_order_msg.order.orderId = std::stoi(word);
 
                 std::getline(ss, word, ',');
-                nextOrderMsg.order.price = std::stoi(word);
+                next_order_msg.order.order_type = StringToOrderType(word);
 
                 std::getline(ss, word, ',');
-                nextOrderMsg.order.quantity = std::stoi(word);
-            }
-            else if(orderMessageTypeStr == "GetBestBid") {
-                nextOrderMsg.orderMessageType = OrderMessageType::getBestBid;
-            }
-            else if(orderMessageTypeStr == "GetAskVolumeBetweenPrices") {
-                nextOrderMsg.orderMessageType = OrderMessageType::getAskVolumeBetweenPrices;
+                next_order_msg.order.price = std::stoi(word);
 
-                /* todo:
-                 * Since we use a static placement opf variables, but GetAsk.. does not have most of the values,
-                 * we need to skip multiple fields, until we get to the end. This is not ideal, and the csv could be
-                 * separated into diff csv files, but anyway real data planned be used, so decided to not focus on this
-                 * for now*/
+                std::getline(ss, word, ',');
+                next_order_msg.order.quantity = std::stoi(word);
+            } else if (order_message_type_str == "GetBestBid") {
+                next_order_msg.order_message_type = OrderMessageType::GET_BEST_BID;
+            } else if (order_message_type_str == "GetAskVolumeBetweenPrices") {
+                next_order_msg.order_message_type = OrderMessageType::GET_ASK_VOLUME_BETWEEN_PRICES;
                 do {
-                    std::getline(ss, word, ',');  // skip empty lines
-                }while(word.empty());
-                nextOrderMsg.lowerPrice = std::stoi(word);
+                    std::getline(ss, word, ',');  // skip empty lines todo: not ideal
+                } while (word.empty());
+                next_order_msg.lower_price = std::stoi(word);
                 std::getline(ss, word, ',');
-                nextOrderMsg.upperPrice = std::stoi(word);
+                next_order_msg.upper_price = std::stoi(word);
             }
 
-            orderMessages.push_back(nextOrderMsg);
+            order_messages.push_back(next_order_msg);
         }
         file.close();
-    }
-    else {
+    } else {
         std::cout << "Example Dataset File open failed " << filename << std::endl;
     }
 
-    return orderMessages;
+    return order_messages;
 }
 
 int main() {
-    std::vector<OrderMessage> orderMessageFeed = loadOrdersFromCSV("../ExampleOrderDataset/ExampleDataset.csv");
-    std::cout << "Starting processing of: "<< orderMessageFeed.size() << " order messages" << std::endl;
+    std::vector<OrderMessage> order_message_feed = LoadOrdersFromCSV("../ExampleOrderDataset/ExampleDataset.csv");
+    std::cout << "Starting processing of: " << order_message_feed.size() << " order messages" << std::endl;
 
-    OrderBook orderBook;
+    OrderBook order_book;
     uint32_t debug_dummy_volume_ask = 0;
     uint32_t debug_dummy_volume_bid = 0;
 
-    //todo multithreading, consume feed from queue
-    for(OrderMessage nextOrderMsg : orderMessageFeed) {
-        if(nextOrderMsg.orderMessageType == OrderMessageType::cancelOrder) {
-            orderBook.CancelOrderbyId(nextOrderMsg.order.orderId);
+    // todo multithreading, consume feed from queue
+    for (OrderMessage next_order_msg : order_message_feed) {
+        if (next_order_msg.order_message_type == OrderMessageType::CANCEL_ORDER) {
+            order_book.CancelOrderbyId(next_order_msg.order.orderId);
+        } else if (next_order_msg.order_message_type == OrderMessageType::ADD_ORDER) {
+            order_book.AddOrder(next_order_msg.order);
         }
-        else if(nextOrderMsg.orderMessageType == OrderMessageType::addOrder) {
-            orderBook.AddOrder(nextOrderMsg.order);
-        }
-        // Make sure compiler does not optimize out these unused values by volatile flag (during benchmark where no dummy)
-        else if(nextOrderMsg.orderMessageType == OrderMessageType::getBestBid) {
-            volatile std::pair<int, int> mypair = orderBook.GetBestBidWithQuantity();
-            debug_dummy_volume_bid += mypair.second;
-        }
-        else if(nextOrderMsg.orderMessageType == OrderMessageType::getAskVolumeBetweenPrices) {
-            volatile uint32_t askVolume = orderBook.GetVolumeBetweenPrices(nextOrderMsg.lowerPrice, nextOrderMsg.upperPrice);
+        // Make sure compiler does not optimize by volatile flag (during benchmark where no dummy).
+        else if (next_order_msg.order_message_type == OrderMessageType::GET_BEST_BID) {
+            volatile std::pair<int, int> my_pair = order_book.GetBestBidWithQuantity();
+            debug_dummy_volume_bid += my_pair.second;
+        } else if (next_order_msg.order_message_type == OrderMessageType::GET_ASK_VOLUME_BETWEEN_PRICES) {
+            volatile uint32_t askVolume =
+                order_book.GetVolumeBetweenPrices(next_order_msg.lower_price, next_order_msg.upper_price);
             debug_dummy_volume_ask += askVolume;
         }
     }
 
-    std::cout << "Processing finished, trades recorded: " << orderBook.GetTrades().size() << std::endl;
-    std::cout <<  "Returned ask volume: " << debug_dummy_volume_ask << std::endl;
-    std::cout <<  "Returned bid volume: " << debug_dummy_volume_bid << std::endl;
+    std::cout << "Processing finished, trades recorded: " << order_book.GetTrades().size() << std::endl;
+    std::cout << "Returned ask volume: " << debug_dummy_volume_ask << std::endl;
+    std::cout << "Returned bid volume: " << debug_dummy_volume_bid << std::endl;
 
     return 0;
 }

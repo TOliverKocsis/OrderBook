@@ -1,234 +1,238 @@
-//
-// Created by oliverk on 29/07/24.
-//
-#include <iostream>
-#include <vector>
-#include <unordered_map>
-#include <queue>
-#include <utility>
-#include "Order.hpp"
 #include "OrderBook.hpp"
 
-#include <stack>
+#include <iostream>
+#include <unordered_map>
 #include <utility>
+#include <vector>
+
+#include "Order.hpp"
 
 // Preprocessor macro definitions
 #ifdef ENABLE_DEBUG_PRINTS
-    #define DEBUG_PRINT(x) std::cout << x << std::endl;
+#define DEBUG_PRINT(x) std::cout << x << std::endl;
 #else
-    #define DEBUG_PRINT(x) do {} while (0)
+#define DEBUG_PRINT(x) \
+    do {               \
+    } while (0)
 #endif
-
-void OrderBook::ProcessOrders(){
-    //todo could this be done by another thread
-    while(!bids_level.empty() and !asks_level.empty()){
+/*
+ * Check if we can match sell and buy orders in the OrderBook for trades to happen.
+ * If trade happens, delete Orders with zero quantity left.
+ */
+void OrderBook::ProcessOrders() {
+    while (!bids_level_.empty() and !asks_level_.empty()) {
         uint32_t best_bid = GetBestBid();
         uint32_t best_ask = GetBestAsk();
-        if (best_bid >= best_ask){
-            Level& bidLevel = bids_level.begin()->second;
-            Level& askLevel = asks_level.begin()->second;
-            Order& bidOrder = bids_level.begin()->second.ordersList.front();
-            Order& askOrder = asks_level.begin()->second.ordersList.front();
+        if (best_bid >= best_ask) {
+            Level &bid_level = bids_level_.begin()->second;
+            Level &ask_level = asks_level_.begin()->second;
+            Order &bid_order = bids_level_.begin()->second.orders_list.front();
+            Order &ask_order = asks_level_.begin()->second.orders_list.front();
 
-            //handle amounts traded
-            uint32_t traded_amount = std::min(bidOrder.quantity, askOrder.quantity);
+            uint32_t traded_amount = std::min(bid_order.quantity, ask_order.quantity);
 
-            //reduce quantity of trade of both ask and bid, and their Level
-            uint32_t new_bid_quantity = bidOrder.quantity - traded_amount;
-            bidLevel.quantity -= traded_amount;
-            bidOrder.quantity=new_bid_quantity;
+            // Reduce quantity of trade of both ask and bid, and their holding Level.
+            uint32_t new_bid_quantity = bid_order.quantity - traded_amount;
+            bid_level.quantity -= traded_amount;
+            bid_order.quantity = new_bid_quantity;
 
-            uint32_t new_ask_quantity = askOrder.quantity - traded_amount;
-            askLevel.quantity -= traded_amount;
-            askOrder.quantity=new_ask_quantity;
+            uint32_t new_ask_quantity = ask_order.quantity - traded_amount;
+            ask_level.quantity -= traded_amount;
+            ask_order.quantity = new_ask_quantity;
 
-            //simulate order processing
-            ExecuteTrade(bidOrder.orderId, askOrder.orderId, askOrder.price, traded_amount);
+            // Simulate order record / sending a network message.
+            ExecuteTrade(bid_order.orderId, ask_order.orderId, ask_order.price, traded_amount);
 
-            //remove the order from the orderbook, that has no quantity left
-            if (bidOrder.quantity == 0){
-                bids_db.erase(bidOrder.orderId);  //1. remove from hashmap
-                bidLevel.ordersList.pop_front();  //2. remove from linked list
-                if(bidLevel.quantity < 1) {       //3. remove empty Level from map
-                    bids_level.erase(bidLevel.price);
+            // Remove empty orders from hashmap, linked list, and purge empty Level with zero orders.
+            if (bid_order.quantity == 0) {
+                bids_db_.erase(bid_order.orderId);  // 1. remove from hashmap
+                bid_level.orders_list.pop_front();  // 2. remove from linked list
+                if (bid_level.quantity < 1) {       // 3. remove empty Level from map
+                    bids_level_.erase(bid_level.price);
                 }
             }
-            if (askOrder.quantity == 0){
-                asks_db.erase(askOrder.orderId);  //1. remove from hashmap
-                askLevel.ordersList.pop_front();  //2. remove from linked list
-                if(askLevel.quantity < 1) {       //3. remove empty Level from map
-                    asks_level.erase(askLevel.price);
+            if (ask_order.quantity == 0) {
+                asks_db_.erase(ask_order.orderId);  // 1. remove from hashmap
+                ask_level.orders_list.pop_front();  // 2. remove from linked list
+                if (ask_level.quantity < 1) {       // 3. remove empty Level from map
+                    asks_level_.erase(ask_level.price);
                 }
             }
-        }
-        else{break;}//no orders to match
+        } else {
+            break;
+        }  // no orders to match
     }
 }
 
-
-OrderBook::OrderBook(){
-        // Constructor implementation
-        OrderIDTracker = 0; //track max order id so far, to keep the rule of increasing order numbers during a day
+OrderBook::OrderBook() {
+    // Track max order id so far, to keep the rule of increasing order numbers during a day.
+    order_id_tracker_ = 0;
+    bids_db_.reserve(262145);
 }
 
-
-void OrderBook::AddOrder(Order order){
-        if(order.quantity < 1) {
-            throw std::invalid_argument("Quantity must be more than zero.");
-        }
-        if(order.orderId <= OrderIDTracker) {
-            throw std::invalid_argument("Order ID must be increasing and uniq number.");
-        }
-        if(order.price < 1) {
-            throw std::invalid_argument("Price must be more than zero.");
-        }
-        if(order.ordertype == OrderType::undefined){return;}  //chose to simply ignore undefined orders
-
-        OrderIDTracker = std::max(OrderIDTracker, order.orderId);
-        uint32_t price = order.price;
-        if (order.ordertype == OrderType::buy){
-            if(!bids_level.contains(price)) {
-                Level newPriceLevel;    //price is new, so add price level to bin search tree (map)
-                newPriceLevel.price = price;
-                bids_level[price] = newPriceLevel;
-            }
-            bids_level[price].quantity += order.quantity;
-            order.parentLevel = &bids_level[price];
-            //Note: measured insert vs emplace_back and push_back, insert ~30 ns faster
-            auto it = bids_level[price].ordersList.insert(bids_level[price].ordersList.end(), order);
-            bids_db[order.orderId] = it;
-        }
-        if (order.ordertype == OrderType::sell){
-            if(!asks_level.contains(price)) {
-                Level newPriceLevel;    //price is new, so add price level to bin search tree (map)
-                newPriceLevel.price = price;
-                asks_level[price] = newPriceLevel;
-            }
-            asks_level[price].quantity += order.quantity;
-            order.parentLevel = &asks_level[price];
-            auto it = asks_level[price].ordersList.insert(asks_level[price].ordersList.end(), order);
-            asks_db[order.orderId] = it;
-        }
-        //after adding new price point, run processing to see if we can fulfill any orders
-        ProcessOrders();
-}
-
-
-/*
- * Cancel an order based on order id
- */
-void OrderBook::CancelOrderbyId(uint32_t orderId) {
-        //check if we can see this orderid in either asks or bids
-        if(bids_db.contains(orderId)) {
-            auto listIt = bids_db[orderId];     //get list iterator from hashmap
-            Order& delTargetOrder = *listIt;                   //dereference it to get the Order struct
-            Level& refLevel = *delTargetOrder.parentLevel;     //get a Level pointer from Order struct
-            refLevel.ordersList.erase(listIt);               //remove from linkedlist pointer(=list::iterator)
-            bids_db.erase(orderId);
-            refLevel.quantity -= delTargetOrder.quantity;      //reduce quantity
-            if(refLevel.quantity < 1) {
-                bids_level.erase(refLevel.price);              //remove empty Level from map
-            }
-            return;
-        }
-        if(asks_db.contains(orderId)) {
-            auto listIt = asks_db[orderId];     //get list iterator from hashmap
-            Order& delTargetOrder = *listIt;                   //dereference it to get the Order struct
-            Level& refLevel = *delTargetOrder.parentLevel;     //get a Level pointer from Order struct
-            refLevel.ordersList.erase(listIt);               //remove from linkedlist pointer(=list::iterator)
-            asks_db.erase(orderId);
-            refLevel.quantity -= delTargetOrder.quantity;      //reduce quantity
-            if(refLevel.quantity < 1) {
-                asks_level.erase(refLevel.price);              //remove empty Level from map
-            }
-        }
-}
-
-
-void printTrade(const Trade& trade) {
-    //debug print controlled by Cmake flag to disable print during benchmark(/"release")
-        DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buyOrderId
-                  << " with SellOrderID: " << trade.sellOrderId
-                  << " at price " << trade.price
-                  << " for quantity " << trade.quantity << std::endl);
+void OrderBook::AddOrder(Order order) {
+    if (order.quantity < 1) {
+        throw std::invalid_argument("Quantity must be more than zero.");
+    }
+    if (order.orderId <= order_id_tracker_) {
+        throw std::invalid_argument("Order ID must be increasing and uniq number.");
+    }
+    if (order.price < 1) {
+        throw std::invalid_argument("Price must be more than zero.");
+    }
+    if (order.order_type == OrderType::UNDEFINED) {
+        return;  // chose to simply ignore undefined orders
     }
 
-
-void OrderBook::ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double price, uint32_t quantity) {
-        Trade trade = {buyOrderId, sellOrderId, price, quantity, std::chrono::system_clock::now()};
-        trades.push_back(trade);
-        printTrade(trade);
+    order_id_tracker_ = std::max(order_id_tracker_, order.orderId);
+    uint32_t price = order.price;
+    if (order.order_type == OrderType::BUY) {
+        if (!bids_level_.contains(price)) {
+            // Add price level to bin search tree (std::map).
+            Level new_price_level;
+            new_price_level.price = price;
+            bids_level_[price] = new_price_level;
+        }
+        bids_level_[price].quantity += order.quantity;
+        order.parent_level = &bids_level_[price];
+        auto it = bids_level_[price].orders_list.insert(bids_level_[price].orders_list.end(), order);
+        bids_db_[order.orderId] = it;
     }
-
-
-std::vector<Trade>& OrderBook::GetTrades(){return trades;}
-
-/*
- * Return pair of Price and Quantity
- * If there are multiple bids on the same price (same level) their quantites are added together
- */
-std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity(){
-    if(bids_level.empty()) {return std::make_pair(0, 0);}
-    return std::make_pair(bids_level.begin()->first, bids_level.begin()->second.quantity);
+    if (order.order_type == OrderType::SELL) {
+        if (!asks_level_.contains(price)) {
+            // Add price level to bin search tree (std::map).
+            Level new_price_level;
+            new_price_level.price = price;
+            asks_level_[price] = new_price_level;
+        }
+        asks_level_[price].quantity += order.quantity;
+        order.parent_level = &asks_level_[price];
+        auto it = asks_level_[price].orders_list.insert(asks_level_[price].orders_list.end(), order);
+        asks_db_[order.orderId] = it;
+    }
+    // After adding new price point, run processing to see if we can fulfill any orders.
+    ProcessOrders();
 }
 
 /*
- * Return pair of 1:Price and 2:Quantity
- * If there are multiple bids on the same price (same level) their quantites are added together
+ * Cancel an order based on order id.
  */
-std::pair<uint32_t, uint32_t> OrderBook::GetBestAskWithQuantity(){
-    if(asks_level.empty()) {return std::make_pair(0, 0);}
-    return std::make_pair(asks_level.begin()->first, asks_level.begin()->second.quantity);
+void OrderBook::CancelOrderbyId(uint32_t order_id) {
+    if (bids_db_.contains(order_id)) {
+        auto listIt = bids_db_[order_id];                   // get list iterator from hashmap
+        Order &del_target_order = *listIt;                  // dereference it to get the Order struct
+        Level &ref_level = *del_target_order.parent_level;  // get a Level pointer from Order struct
+        ref_level.orders_list.erase(listIt);                // remove from linkedlist pointer(=list::iterator)
+        bids_db_.erase(order_id);
+        ref_level.quantity -= del_target_order.quantity;  // reduce quantity
+        if (ref_level.quantity < 1) {
+            bids_level_.erase(ref_level.price);  // remove empty Level from map
+        }
+        return;
+    }
+    if (asks_db_.contains(order_id)) {
+        auto list_iterator = asks_db_[order_id];         // get list iterator from hashmap
+        Order &delTargetOrder = *list_iterator;          // dereference it to get the Order struct
+        Level &refLevel = *delTargetOrder.parent_level;  // get a Level pointer from Order struct
+        refLevel.orders_list.erase(list_iterator);       // remove from linkedlist pointer(=list::iterator)
+        asks_db_.erase(order_id);
+        refLevel.quantity -= delTargetOrder.quantity;  // reduce quantity
+        if (refLevel.quantity < 1) {
+            asks_level_.erase(refLevel.price);  // remove empty Level from map
+        }
+    }
 }
 
+void printTrade(const Trade &trade) {
+    // Debug print controlled by Cmake flag to disable print during benchmark(/"release").
+    DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buyOrderId << " with SellOrderID: " << trade.sellOrderId
+                                               << " at price " << trade.price << " for quantity " << trade.quantity
+                                               << std::endl);
+}
+
+void OrderBook::ExecuteTrade(uint32_t buy_order_id, uint32_t sellOrderId, double price, uint32_t quantity) {
+    Trade trade = {buy_order_id, sellOrderId, price, quantity, std::chrono::system_clock::now()};
+    trades.push_back(trade);
+    printTrade(trade);
+}
+
+std::vector<Trade> &OrderBook::GetTrades() { return trades; }
 
 /*
- * Returns the quantity of ask orders between start and end input values both being inclusive
+ * Return pair of Price and Quantity.
+ * If there are multiple bids on the same price (same level) their quantites are
+ * added together.
+ */
+std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity() {
+    if (bids_level_.empty()) {
+        return std::make_pair(0, 0);
+    }
+    return std::make_pair(bids_level_.begin()->first, bids_level_.begin()->second.quantity);
+}
+
+/*
+ * Return pair of 1:Price and 2:Quantity.
+ * If there are multiple bids on the same price (same level) their quantites are
+ * added together.
+ */
+std::pair<uint32_t, uint32_t> OrderBook::GetBestAskWithQuantity() {
+    if (asks_level_.empty()) {
+        return std::make_pair(0, 0);
+    }
+    return std::make_pair(asks_level_.begin()->first, asks_level_.begin()->second.quantity);
+}
+
+/*
+ * Returns the quantity of ask orders between start and end input values, both
+ * being inclusive.
  */
 uint32_t OrderBook::GetVolumeBetweenPrices(uint32_t start, uint32_t end) {
-    if(asks_level.empty()) {return 0;}
-    if(start > end) {return 0;}
-    //if the first ask price, so lowest, is already lower than end value, quantity will be zero
-    if(asks_level.begin()->first > end){return 0;}
+    if (asks_level_.empty()) {
+        return 0;
+    }
+    if (start > end) {
+        return 0;
+    }
+    // If the first ask price, so lower, is already lower than end value, quantity will be zero.
+    if (asks_level_.begin()->first > end) {
+        return 0;
+    }
 
     uint32_t volume = 0;
-    for(uint32_t curPriceCheck=start; curPriceCheck<end+1; curPriceCheck++) {
-        if(asks_level.contains(curPriceCheck)){volume+= asks_level[curPriceCheck].quantity;}
+    for (uint32_t curPriceCheck = start; curPriceCheck < end + 1; curPriceCheck++) {
+        if (asks_level_.contains(curPriceCheck)) {
+            volume += asks_level_[curPriceCheck].quantity;
+        }
     }
     return volume;
 }
 
 unsigned long OrderBook::GetBidQuantity() {
-    unsigned long quantity=0;
-    for(auto const& mapPair: bids_level) {
+    unsigned long quantity = 0;
+    for (auto const &mapPair : bids_level_) {
         quantity += mapPair.second.quantity;
     }
     return quantity;
 }
 
 unsigned long OrderBook::GetAskQuantity() {
-    unsigned long quantity=0;
-    for(auto const& mapPair: asks_level) {
+    unsigned long quantity = 0;
+    for (auto const &mapPair : asks_level_) {
         quantity += mapPair.second.quantity;
     }
     return quantity;
 }
 
 uint32_t OrderBook::GetBestBid() {
-    if(bids_level.empty()){return 0;}
-    //todo Note: would it be faster if we only delete a empty levels if there are more then 20 empty levels for example?
-    //this would cause to be forced to skip some empty levels when searching for the next bid, making code bit more complex
-    //and with extra branching it would be slower for most cases?
-    //leaving empty levels would only help the cases when we keep adding then deleting levels
-    /*while(!bids_level.empty() and bids_level.begin()->second.quantity==0) {
-        //so while the map is not empty, and the top has zero quantity, purge the Level, as it causes slow down?
-        //or is it better to just always skip the empty levels?
-        bids_level.erase(bids_level.begin());
-    }*/
-    return bids_level.begin()->second.price;
+    if (bids_level_.empty()) {
+        return 0;
+    }
+    return bids_level_.begin()->second.price;
 }
 
 uint32_t OrderBook::GetBestAsk() {
-    if(asks_level.empty()){return 0;}
-    return asks_level.begin()->second.price;
+    if (asks_level_.empty()) {
+        return 0;
+    }
+    return asks_level_.begin()->second.price;
 }
