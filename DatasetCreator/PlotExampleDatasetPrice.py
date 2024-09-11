@@ -1,10 +1,10 @@
 # This script file plots the price change of the ExampleDataset.csv file, that's created by DataGenerator.py
 
-import pandas as pd
 import matplotlib.pyplot as plt
+import pandas as pd
 
-#Chose theme/style for generated plot
-#plt.style.use('Solarize_Light2')
+# Chose theme/style for generated plot
+# plt.style.use('Solarize_Light2')
 plt.style.use('seaborn-v0_8')
 
 # Read the CSV file, and report errors
@@ -43,7 +43,7 @@ plt.ylabel('Price')
 plt.title('Price Changes for Buy and Sell Orders')
 plt.legend()
 
-plt.tight_layout() #reduce white space / focuses in
+plt.tight_layout()  # reduce white space / focuses in
 
 # Save the plot as an image file
 # plt.show()
@@ -51,4 +51,3 @@ output_path = '../ExampleOrderDataset/buynsell_price_plot.png'
 plt.savefig(output_path)
 
 print(f"Plot saved as {output_path}")
-

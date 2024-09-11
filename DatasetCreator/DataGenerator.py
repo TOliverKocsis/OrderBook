@@ -5,27 +5,29 @@
 import csv
 import os
 import random
-from enum import Enum
 from collections import deque
+from enum import Enum
 
-#Custom variables for generation
-NUM_OF_MESSAGES = 100000 #100k
+# Custom variables for generation
+NUM_OF_MESSAGES = 100000
 OUTPUT_FILENAME = 'ExampleDataset.csv'
 START_PRICE = 150
-PRICE_HISTORY_SIZE = 100 #Ask volume between prices uses a random choice from last PRICE_HISTORY_SIZE amount
+PRICE_HISTORY_SIZE = 100  # Ask volume between prices uses a random choice from last PRICE_HISTORY_SIZE amount
 
-#Global variables
+# Global variables
 last_price = 100
 first_iter = True
 high_limit_mode = False
-low_limit_mode= False
+low_limit_mode = False
 latest_prices = deque(maxlen=PRICE_HISTORY_SIZE)  # Circular buffer to store the latest 100 ask prices generated
+
 
 # Define the data structures
 class OrderType(Enum):
     UNDEFINED = 'undefined'
     BUY = 'buy'
     SELL = 'sell'
+
 
 class Order:
     def __init__(self, ordertype=OrderType.UNDEFINED, order_id=0, price=0, quantity=0):
@@ -34,21 +36,27 @@ class Order:
         self.price = price
         self.quantity = quantity
 
+
 class AddOrder:
     def __init__(self, order):
         self.order = order
+
 
 class CancelOrder:
     def __init__(self, order_id):
         self.order_id = order_id
 
+
 class GetBestBid:
     def __init__(self):
         pass
+
+
 class GetAskVolumeBetweenPrices:
     def __init__(self, lower_price, upper_price):
         self.lower_price = lower_price
         self.upper_price = upper_price
+
 
 # Generate random data
 def generate_random_order(order_id):
@@ -67,38 +75,39 @@ def generate_random_order(order_id):
     if last_price <= 100: low_limit_mode = True
 
     if high_limit_mode:
-        price = last_price + random.choice([-3,-2,-1,0,1,2])  # bias towards reducing
+        price = last_price + random.choice([-3, -2, -1, 0, 1, 2])  # bias towards reducing
         if price < 200: high_limit_mode = False
     elif low_limit_mode:
-        price = last_price + random.choice([-2,-1,0,1,2,3])  # bias towards increasing
+        price = last_price + random.choice([-2, -1, 0, 1, 2, 3])  # bias towards increasing
         if price > 200: low_limit_mode = False
-    #else regular mode without bias to + or -
-    else: price = last_price + random.choice([-2,-1,0,1,2])
+    # else regular mode without bias to + or -
+    else:
+        price = last_price + random.choice([-2, -1, 0, 1, 2])
 
     last_price = price
     quantity = random.randint(1, 100)
 
-    if ordertype == OrderType.SELL: # as this is used for ask volume between prices, only save ask type price
+    if ordertype == OrderType.SELL:  # as this is used for ask volume between prices, only save ask type price
         latest_prices.append(last_price)
 
     return Order(ordertype, order_id, price, quantity)
 
-def generate_random_orders(num_orders):
 
+def generate_random_orders(num_orders):
     orders = []
     order_ids_list = []  # store orderids from AddOrder so we can pick one in random to cancel
     # store the previous 100 orders, for choice of GetAskVolumeBetweenPrices, in a circular buffer
 
     for i in range(1, num_orders + 1):
         # random.choices return  k (default=1) sized list with choices from population, biased by weights
-        message_type = random.choices(
-            ['AddOrder', 'CancelOrder', 'GetBestBid', 'GetAskVolumeBetweenPrices'],
-            [0.25, 0.15, 0.4, 0.2]
-            # AddOrder 25%
-            # CancelOrder 15%
-            # GetBestBid 40%
-            # GetAskVolume 20%
-        )[0]
+        message_type = \
+            random.choices(['AddOrder', 'CancelOrder', 'GetBestBid', 'GetAskVolumeBetweenPrices'],
+                           [0.25, 0.15, 0.4, 0.2]
+                           # AddOrder 25%
+                           # CancelOrder 15%
+                           # GetBestBid 40%
+                           # GetAskVolume 20%
+                           )[0]
 
         if message_type == 'AddOrder':
             order = generate_random_order(i)
@@ -121,6 +130,7 @@ def generate_random_orders(num_orders):
         orders.append(wrapped_order)
     return orders
 
+
 # Write the data to a CSV file
 def write_order_messages_to_csv(order_messages, file_path):
     with open(file_path, mode='w', newline='') as file:
@@ -129,49 +139,45 @@ def write_order_messages_to_csv(order_messages, file_path):
 
         for order in order_messages:
             if isinstance(order, AddOrder):
-                writer.writerow([
-                    'AddOrder',                     # 1. Msg type
-                    order.order.order_id,           # 2. Order ID
-                    order.order.ordertype.value,    # 3. Order Type: buy/sell/undefined
-                    order.order.price,              # 4. Order Price
-                    order.order.quantity,           # 5. Quantity
-                    '',                             # 6. Lower Price
-                    ''                              # 7. Upper Price
-                ])
+                writer.writerow(['AddOrder',  # 1. Msg type
+                                 order.order.order_id,  # 2. Order ID
+                                 order.order.ordertype.value,  # 3. Order Type: buy/sell/undefined
+                                 order.order.price,  # 4. Order Price
+                                 order.order.quantity,  # 5. Quantity
+                                 '',  # 6. Lower Price
+                                 ''  # 7. Upper Price
+                                 ])
             elif isinstance(order, CancelOrder):
-                writer.writerow([
-                    'CancelOrder',                  # 1. Msg type
-                    order.order_id,                 # 2. Order ID
-                    '',                             # 3. Order Type
-                    '',                             # 4. Order Price
-                    '',                             # 5. Quantity
-                    '',                             # 6. Lower Price
-                    ''                              # 7. Upper Price
-                ])
+                writer.writerow(['CancelOrder',  # 1. Msg type
+                                 order.order_id,  # 2. Order ID
+                                 '',  # 3. Order Type
+                                 '',  # 4. Order Price
+                                 '',  # 5. Quantity
+                                 '',  # 6. Lower Price
+                                 ''  # 7. Upper Price
+                                 ])
             elif isinstance(order, GetBestBid):
-                writer.writerow([
-                    'GetBestBid',                   # 1. Msg type
-                    '',                             # 2. Order ID
-                    '',                             # 3. Order Type
-                    '',                             # 4. Order Price
-                    '',                             # 5. Quantity
-                    '',                             # 6. Lower Price
-                    ''                              # 7. Upper Price
-                ])
+                writer.writerow(['GetBestBid',  # 1. Msg type
+                                 '',  # 2. Order ID
+                                 '',  # 3. Order Type
+                                 '',  # 4. Order Price
+                                 '',  # 5. Quantity
+                                 '',  # 6. Lower Price
+                                 ''  # 7. Upper Price
+                                 ])
             elif isinstance(order, GetAskVolumeBetweenPrices):
-                writer.writerow([
-                    'GetAskVolumeBetweenPrices',       # 1. Msg type
-                    '',                             # 2. Order ID
-                    '',                             # 3. Order Type
-                    '',                             # 4. Order Price
-                    '',                             # 5. Quantity
-                    order.lower_price,              # 6. Lower Price
-                    order.upper_price               # 7. Upper Price
-                ])
+                writer.writerow(['GetAskVolumeBetweenPrices',  # 1. Msg type
+                                 '',  # 2. Order ID
+                                 '',  # 3. Order Type
+                                 '',  # 4. Order Price
+                                 '',  # 5. Quantity
+                                 order.lower_price,  # 6. Lower Price
+                                 order.upper_price  # 7. Upper Price
+                                 ])
+
 
 # Call generation, call write to .csv, save result to ../ExampleOrderDataset
 def main(num_order_messages):
-
     # Determine the file path
     output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ExampleOrderDataset')
     os.makedirs(output_dir, exist_ok=True)
@@ -183,6 +189,7 @@ def main(num_order_messages):
     # Write to CSV
     write_order_messages_to_csv(order_messages, file_path)
     print(f"CSV file created at: {file_path}")
+
 
 if __name__ == '__main__':
     main(num_order_messages=NUM_OF_MESSAGES)
