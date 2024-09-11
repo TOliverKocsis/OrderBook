@@ -6,9 +6,9 @@ project(Google_benchmark)
 add_subdirectory(benchmark)
 
 # Specify all benchmark source files
-set(    BENCHMARK_SOURCES
+set(BENCHMARK_SOURCES
         OrderBook_benchmark.cpp
-        Dataset_process_benchmark.cpp
+        dataset_process_benchmark.cpp
 )
 
 # Adding the benchmark run target
