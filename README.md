@@ -9,13 +9,13 @@ retrieve the best bid and ask prices, and compute the ask volume within specifie
 The project is thoroughly unit-tested using the Google Test framework, with benchmarking and performance evaluations
 conducted via Google Benchmark.
 
-The DatasetCreator/DataGenerator.py creates an ExampleDataset.csv that simulates incoming order messages.
+The dataset_creator/data_generator.py creates an example_dataset.csv that simulates incoming order messages.
 
 The prices of orders are subject to random fluctuations, with biases designed to create upward and downward trends.
 Prices remain closely correlated to facilitate a large volume of trades.
 
-<img src="ExampleOrderDataset/buynsell_price_plot.png" title="Price Changes for Buy and Sell Orders" alt=""/>
-*Figure 1: Plot of prices created by the DataGenerator.py (plot by: PlotExampleDatasetPrice.py)
+<img src="example_order_dataset/buynsell_price_plot.png" title="Price Changes for Buy and Sell Orders" alt=""/>
+*Figure 1: Plot of prices created by the DataGenerator.py (plot by: plot_example_dataset_price.py)
 
 The example dataset is processed by main.cpp, which uses the Orderbook class from OrderBook_lib.
 
