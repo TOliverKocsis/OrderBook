@@ -3,9 +3,9 @@
 
 #include <list>
 
-#include "Order.hpp"
+#include "order.hpp"
 
-/* Level is an object for a price level of an instrument. It encapsulates every standing order for the instrument at
+/* Llevel is an object for a price level of an instrument. It encapsulates every standing order for the instrument at
  * this price point. Internally it holds a bidirectional linked list of order_list object.
  */
 

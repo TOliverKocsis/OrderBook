@@ -10,7 +10,7 @@ from enum import Enum
 
 # Custom variables for generation
 NUM_OF_MESSAGES = 100000
-OUTPUT_FILENAME = 'ExampleDataset.csv'
+OUTPUT_FILENAME = 'example_dataset.csv'
 START_PRICE = 150
 PRICE_HISTORY_SIZE = 100  # Ask volume between prices uses a random choice from last PRICE_HISTORY_SIZE amount
 
@@ -176,10 +176,10 @@ def write_order_messages_to_csv(order_messages, file_path):
                                  ])
 
 
-# Call generation, call write to .csv, save result to ../ExampleOrderDataset
+# Call generation, call write to .csv, save result to ../example_order_dataset
 def main(num_order_messages):
     # Determine the file path
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ExampleOrderDataset')
+    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'example_order_dataset')
     os.makedirs(output_dir, exist_ok=True)
     file_path = os.path.join(output_dir, OUTPUT_FILENAME)
 

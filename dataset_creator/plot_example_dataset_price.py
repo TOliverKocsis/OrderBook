@@ -1,4 +1,4 @@
-# This script file plots the price change of the ExampleDataset.csv file, that's created by DataGenerator.py
+# This script file plots the price change of the ExampleDataset.csv file, that's created by data_generator.py
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,7 +8,7 @@ import pandas as pd
 plt.style.use('seaborn-v0_8')
 
 # Read the CSV file, and report errors
-file_path = '../ExampleOrderDataset/ExampleDataset.csv'  # Replace with your actual file path
+file_path = '../example_order_dataset/example_dataset.csv'  # Replace with your actual file path
 try:
     df = pd.read_csv(file_path)
 except FileNotFoundError:
@@ -47,7 +47,7 @@ plt.tight_layout()  # reduce white space / focuses in
 
 # Save the plot as an image file
 # plt.show()
-output_path = '../ExampleOrderDataset/buynsell_price_plot.png'
+output_path = '../example_order_dataset/buynsell_price_plot.png'
 plt.savefig(output_path)
 
 print(f"Plot saved as {output_path}")

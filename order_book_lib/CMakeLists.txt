@@ -1,14 +1,14 @@
 project(OrderBook_lib)
 
 set(HEADER_FILES
-        Order.hpp
-        OrderBook.hpp
-        Trade.hpp
-        Level.hpp
+        order.hpp
+        order_book.hpp
+        trade.hpp
+        level.hpp
 )
 
 set(SOURCE_FILES
-        OrderBook.cpp
+        order_book.cpp
 )
 
 add_library(OrderBook_lib STATIC ${SOURCE_FILES} ${HEADER_FILES})

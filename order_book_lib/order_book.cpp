@@ -1,4 +1,4 @@
-#include "OrderBook.hpp"
+#include "order_book.hpp"
 
 #include <iostream>
 #include <unordered_map>
@@ -13,8 +13,9 @@
 #else
 #define DEBUG_PRINT(x) \
     do {               \
-    } while (0)
+    } while (false)
 #endif
+
 /*
  * Check if we can match sell and buy orders in the OrderBook for trades to happen.
  * If trade happens, delete Orders with zero quantity left.
@@ -24,10 +25,10 @@ void OrderBook::ProcessOrders() {
         uint32_t best_bid = GetBestBid();
         uint32_t best_ask = GetBestAsk();
         if (best_bid >= best_ask) {
-            level &bid_level = bids_level_.begin()->second;
-            level &ask_level = asks_level_.begin()->second;
-            order &bid_order = bids_level_.begin()->second.orders_list.front();
-            order &ask_order = asks_level_.begin()->second.orders_list.front();
+            Level &bid_level = bids_level_.begin()->second;
+            Level &ask_level = asks_level_.begin()->second;
+            Order &bid_order = bids_level_.begin()->second.orders_list.front();
+            Order &ask_order = asks_level_.begin()->second.orders_list.front();
 
             uint32_t traded_amount = std::min(bid_order.quantity, ask_order.quantity);
 
@@ -70,7 +71,7 @@ OrderBook::OrderBook() {
     bids_db_.reserve(262145);
 }
 
-void OrderBook::AddOrder(order order) {
+void OrderBook::AddOrder(Order order) {
     if (order.quantity < 1) {
         throw std::invalid_argument("Quantity must be more than zero.");
     }
@@ -89,7 +90,7 @@ void OrderBook::AddOrder(order order) {
     if (order.order_type == OrderType::BUY) {
         if (!bids_level_.contains(price)) {
             // Add price level to bin search tree (std::map).
-            level new_price_level;
+            Level new_price_level;
             new_price_level.price = price;
             bids_level_[price] = new_price_level;
         }
@@ -101,7 +102,7 @@ void OrderBook::AddOrder(order order) {
     if (order.order_type == OrderType::SELL) {
         if (!asks_level_.contains(price)) {
             // Add price level to bin search tree (std::map).
-            level new_price_level;
+            Level new_price_level;
             new_price_level.price = price;
             asks_level_[price] = new_price_level;
         }
@@ -120,8 +121,8 @@ void OrderBook::AddOrder(order order) {
 void OrderBook::CancelOrderbyId(uint32_t order_id) {
     if (bids_db_.contains(order_id)) {
         auto listIt = bids_db_[order_id];                   // get list iterator from hashmap
-        order &del_target_order = *listIt;                  // dereference it to get the Order struct
-        level &ref_level = *del_target_order.parent_level;  // get a level pointer from Order struct
+        Order &del_target_order = *listIt;                  // dereference it to get the Order struct
+        Level &ref_level = *del_target_order.parent_level;  // get a level pointer from Order struct
         ref_level.orders_list.erase(listIt);                // remove from linkedlist pointer(=list::iterator)
         bids_db_.erase(order_id);
         ref_level.quantity -= del_target_order.quantity;  // reduce quantity
@@ -132,8 +133,8 @@ void OrderBook::CancelOrderbyId(uint32_t order_id) {
     }
     if (asks_db_.contains(order_id)) {
         auto list_iterator = asks_db_[order_id];         // get list iterator from hashmap
-        order &delTargetOrder = *list_iterator;          // dereference it to get the Order struct
-        level &refLevel = *delTargetOrder.parent_level;  // get a level pointer from Order struct
+        Order &delTargetOrder = *list_iterator;          // dereference it to get the Order struct
+        Level &refLevel = *delTargetOrder.parent_level;  // get a level pointer from Order struct
         refLevel.orders_list.erase(list_iterator);       // remove from linkedlist pointer(=list::iterator)
         asks_db_.erase(order_id);
         refLevel.quantity -= delTargetOrder.quantity;  // reduce quantity
@@ -143,7 +144,7 @@ void OrderBook::CancelOrderbyId(uint32_t order_id) {
     }
 }
 
-void printTrade(const Trade &trade) {
+void printTrade(const trade &trade) {
     // Debug print controlled by Cmake flag to disable print during benchmark(/"release").
     DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buyOrderId << " with SellOrderID: " << trade.sellOrderId
                                                << " at price " << trade.price << " for quantity " << trade.quantity
@@ -151,12 +152,12 @@ void printTrade(const Trade &trade) {
 }
 
 void OrderBook::ExecuteTrade(uint32_t buy_order_id, uint32_t sellOrderId, double price, uint32_t quantity) {
-    Trade trade = {buy_order_id, sellOrderId, price, quantity, std::chrono::system_clock::now()};
+    trade trade = {buy_order_id, sellOrderId, price, quantity, std::chrono::system_clock::now()};
     trades.push_back(trade);
     printTrade(trade);
 }
 
-std::vector<Trade> &OrderBook::GetTrades() { return trades; }
+std::vector<trade> &OrderBook::GetTrades() { return trades; }
 
 /*
  * Return pair of Price and Quantity.
