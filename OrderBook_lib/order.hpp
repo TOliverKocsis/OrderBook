@@ -3,7 +3,7 @@
 
 #include <cstdint>  // uint32 type
 
-#include "Level.hpp"
+#include "level.hpp"
 
 enum class OrderType {
     UNDEFINED,
@@ -11,16 +11,16 @@ enum class OrderType {
     SELL,
 };
 
-// forward declaration of Level for parentLevel*
-struct Level;
+// forward declaration of level for parentLevel*
+struct level;
 
-struct Order {
+struct order {
     OrderType order_type{OrderType::UNDEFINED};
     uint32_t orderId{};
     uint32_t price{};
     uint32_t quantity{};
-    Level *parent_level{nullptr};
-    std::list<Order>::iterator listPosition;
+    level *parent_level{nullptr};
+    std::list<order>::iterator listPosition;
 };
 
 enum class OrderMessageType { UNDEFINED, ADD_ORDER, CANCEL_ORDER, GET_BEST_BID, GET_ASK_VOLUME_BETWEEN_PRICES };
@@ -28,7 +28,7 @@ enum class OrderMessageType { UNDEFINED, ADD_ORDER, CANCEL_ORDER, GET_BEST_BID, 
 // To handle ExampleDataset.csv lines
 struct OrderMessage {
     OrderMessageType order_message_type{OrderMessageType::UNDEFINED};
-    Order order;
+    order order;
     // Add fields for GetBestBid and GetAskVolumeBetweenPrices
     int lower_price{0};  // For GetAskVolumeBetweenPrices
     int upper_price{0};  // For GetAskVolumeBetweenPrices
