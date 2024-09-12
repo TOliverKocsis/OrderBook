@@ -93,7 +93,7 @@ static void BM_LoadAndExecuteMessages_SingleThread(benchmark::State& state) {
         OrderBook order_book;
         benchmark::DoNotOptimize(order_book);
         std::vector<OrderMessage> order_message_feed =
-            LoadOrdersFromCSV("../../example_order_dataset/ExampleDataset.csv");
+            LoadOrdersFromCSV("../../example_order_dataset/example_dataset.csv");
 
         for (OrderMessage next_order_msg : order_message_feed) {
             if (next_order_msg.order_message_type == OrderMessageType::CANCEL_ORDER) {

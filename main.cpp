@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 
-#include "Order.hpp"
-#include "OrderBook.hpp"
+#include "order.hpp"
+#include "order_book.hpp"
 
 OrderType StringToOrderType(const std::string& str) {
     if (str == "buy") return OrderType::BUY;
@@ -14,7 +14,7 @@ OrderType StringToOrderType(const std::string& str) {
 }
 
 /*
- * Load the simulated traffic: order messages from a the .csv file created by the DataGenerator.py to a vector.
+ * Load the simulated traffic: order messages from a the .csv file created by the data_generator.py to a vector.
  */
 std::vector<OrderMessage> LoadOrdersFromCSV(const std::string& filename) {
     std::vector<OrderMessage> order_messages;
@@ -76,7 +76,7 @@ std::vector<OrderMessage> LoadOrdersFromCSV(const std::string& filename) {
 }
 
 int main() {
-    std::vector<OrderMessage> order_message_feed = LoadOrdersFromCSV("../ExampleOrderDataset/ExampleDataset.csv");
+    std::vector<OrderMessage> order_message_feed = LoadOrdersFromCSV("../example_order_dataset/example_dataset.csv");
     std::cout << "Starting processing of: " << order_message_feed.size() << " order messages" << std::endl;
 
     OrderBook order_book;
