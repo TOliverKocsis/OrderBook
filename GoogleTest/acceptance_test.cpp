@@ -1,6 +1,6 @@
-#include "Order.hpp"
-#include "OrderBook.hpp"
 #include "gtest/gtest.h"
+#include "order.hpp"
+#include "order_book.hpp"
 
 TEST(ProcessOrdersTestSuit, ExactBuyAndSell) {
     /* Case1: Test exact price matching trade with same amounts.
@@ -14,13 +14,13 @@ TEST(ProcessOrdersTestSuit, ExactBuyAndSell) {
     orderBook.AddOrder(buy_order);
     orderBook.AddOrder(sell_order);
 
-    std::vector<Trade> expectedTrades = {{1, 2, 100, 5, /* timestamp not compared */}};
+    std::vector<trade> expected_trades = {{1, 2, 100, 5, /* timestamp not compared */}};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -38,13 +38,13 @@ TEST(ProcessOrdersTestSuit, ExactBuyAndSellDifferentAmount) {
     orderBook.AddOrder(sell_order1);
 
     // we expect the trade at 105, but only for 7 stocks
-    std::vector<Trade> expectedTrades = {{1, 2, 105, 7, /* timestamp not compared */}};
+    std::vector<trade> expected_trades = {{1, 2, 105, 7, /* timestamp not compared */}};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -68,16 +68,16 @@ TEST(ProcessOrdersTestSuit, BuyOrderForNewAndRemainingSell) {
     orderBook.AddOrder(sell_order_5);
     orderBook.AddOrder(buy_order_6);
 
-    std::vector<Trade> expectedTrades = {{3, 4, 105, 7, /* timestamp not compared */},
-                                         {6, 5, 102, 3, /* timestamp not compared */},
-                                         {6, 4, 105, 3, /* timestamp not compared */}};
+    std::vector<trade> expected_trades = {{3, 4, 105, 7, /* timestamp not compared */},
+                                          {6, 5, 102, 3, /* timestamp not compared */},
+                                          {6, 4, 105, 3, /* timestamp not compared */}};
     // Sell order id 5 happens before 4, because it has a lower price, and lower price comes first.
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -99,18 +99,18 @@ TEST(ProcessOrdersTestSuit, SellOrderFulfilledForRemainder) {
     orderBook.AddOrder(sell_order_4);
     orderBook.AddOrder(buy_order_5);
 
-    std::vector<Trade> expectedTrades = {
+    std::vector<trade> expected_trades = {
         {2, 1, 100, 10, /* timestamp not compared */},
         {3, 4, 119, 10, /* timestamp not compared */},
         {2, 4, 119, 20, /* timestamp not compared */},
         {5, 4, 119, 1, /* timestamp not compared */},
     };
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -139,13 +139,13 @@ TEST(ProcessOrdersTestSuit, LevelsDontMatch) {
     orderBook.AddOrder(sellorder7);
     orderBook.AddOrder(sellorder8);
 
-    std::vector<Trade> expectedTrades = {{1, 5, 100, 5, /* timestamp not compared */}};
+    std::vector<trade> expected_trades = {{1, 5, 100, 5, /* timestamp not compared */}};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -160,13 +160,13 @@ TEST(ProcessOrdersTestSuit, IncorrectInput) {
     Order buyorder4{OrderType::BUY, 0, 103, 5};        // zero orderid
     Order buyorder6{OrderType::BUY, 1, 105, 5};        // already existing orderid
     Order buyorder7{OrderType::BUY, 7, 0, 5};          // zero price
-    Order buyorder9{OrderType::BUY, 9, 99, 5};         // corect order just no match
+    Order buyorder9{OrderType::BUY, 9, 99, 5};         // correct order just no match
     Order sellorder1{OrderType::SELL, 11, 100, 5};
     Order sellorder2{OrderType::SELL, 12, 200, 0};    // zero quantity
     Order sellorder4{OrderType::SELL, 0, 200, 5};     // zero orderid
     Order sellorder6{OrderType::SELL, 11, 200, 5};    // already existing orderid
     Order sellorder7{OrderType::SELL, 17, 0, 5};      // zero price
-    Order sellorder9{OrderType::SELL, 19, 200, 100};  // corect order just no match
+    Order sellorder9{OrderType::SELL, 19, 200, 100};  // correct order just no match
 
     OrderBook orderBook;
     orderBook.AddOrder(buyorder1);
@@ -184,13 +184,13 @@ TEST(ProcessOrdersTestSuit, IncorrectInput) {
     EXPECT_THROW(orderBook.AddOrder(sellorder7), std::invalid_argument);
     orderBook.AddOrder(sellorder9);
 
-    std::vector<Trade> expectedTrades = {{1, 11, 100, 5, /* timestamp not compared */}};
+    std::vector<trade> expected_trades = {{1, 11, 100, 5, /* timestamp not compared */}};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
     // ASSERT_EQ(expectedTrades.size(), actualTrades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -208,16 +208,16 @@ TEST(ProcessOrdersTestSuit, CancelOneOrder) {
     orderBook.AddOrder(sellorder1);
     orderBook.CancelOrderbyId(sellorder1.orderId);
 
-    std::vector<Trade> expectedTrades = {};
+    std::vector<trade> expected_trades = {};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
 
     ASSERT_EQ(orderBook.GetBidQuantity(), 0);
     ASSERT_EQ(orderBook.GetAskQuantity(), 0);
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -249,13 +249,13 @@ TEST(ProcessOrdersTestSuit, MultipleOrdersCancelOneOrder) {
     orderBook.AddOrder(sellorder7);
     orderBook.AddOrder(sellorder8);
 
-    std::vector<Trade> expectedTrades = {};
+    std::vector<trade> expected_trades = {};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -283,10 +283,10 @@ TEST(ProcessOrdersTestSuit, getBestBidTest) {
     orderBook.AddOrder(buyorder7);
     orderBook.AddOrder(buyorder8);
 
-    std::pair<int, int> bidinfo = orderBook.GetBestBidWithQuantity();
-    std::pair<int, int> expectedBidinfo = {100, 40};
+    std::pair<int, int> bid_info = orderBook.GetBestBidWithQuantity();
+    std::pair<int, int> expected_bid_info = {100, 40};
 
-    EXPECT_EQ(bidinfo, expectedBidinfo);
+    EXPECT_EQ(bid_info, expected_bid_info);
 }
 
 TEST(ProcessOrdersTestSuit, getBestAskTest) {
@@ -311,10 +311,10 @@ TEST(ProcessOrdersTestSuit, getBestAskTest) {
     orderBook.AddOrder(sellorder6);
     orderBook.AddOrder(sellorder7);
 
-    std::pair<uint32_t, uint32_t> askinfo = orderBook.GetBestAskWithQuantity();
-    std::pair<uint32_t, uint32_t> expectedAskinfo = {99, 1000};
+    std::pair<uint32_t, uint32_t> ask_info = orderBook.GetBestAskWithQuantity();
+    std::pair<uint32_t, uint32_t> expected_ask_info = {99, 1000};
 
-    EXPECT_EQ(askinfo, expectedAskinfo);
+    EXPECT_EQ(ask_info, expected_ask_info);
 }
 
 TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
@@ -338,10 +338,10 @@ TEST(ProcessOrdersTestSuit, getBestBidTestWithOnlyOnePrice) {
     orderBook.AddOrder(buyorder5);
     orderBook.AddOrder(buyorder6);
 
-    std::pair<int, int> bidinfo = orderBook.GetBestBidWithQuantity();
-    std::pair<int, int> expectedBidinfo = {100, 40};
+    std::pair<int, int> bid_info = orderBook.GetBestBidWithQuantity();
+    std::pair<int, int> expected_bid_info = {100, 40};
 
-    EXPECT_EQ(bidinfo, expectedBidinfo);
+    EXPECT_EQ(bid_info, expected_bid_info);
 }
 
 TEST(ProcessOrdersTestSuit, getBestAskTestWithOnlyOnePrice) {
@@ -365,10 +365,10 @@ TEST(ProcessOrdersTestSuit, getBestAskTestWithOnlyOnePrice) {
     orderBook.AddOrder(sellorder5);
     orderBook.AddOrder(sellorder6);
 
-    std::pair<int, int> askinfo = orderBook.GetBestAskWithQuantity();
-    std::pair<int, int> expectedAskinfo = {100, 40};
+    std::pair<int, int> ask_info = orderBook.GetBestAskWithQuantity();
+    std::pair<int, int> expected_ask_info = {100, 40};
 
-    EXPECT_EQ(askinfo, expectedAskinfo);
+    EXPECT_EQ(ask_info, expected_ask_info);
 }
 
 TEST(ProcessOrdersTestSuit, getBestBidTest_NoVolume) {
@@ -378,10 +378,10 @@ TEST(ProcessOrdersTestSuit, getBestBidTest_NoVolume) {
 
     OrderBook orderBook;
 
-    std::pair<uint32_t, uint32_t> bidinfo = orderBook.GetBestBidWithQuantity();
-    std::pair<uint32_t, uint32_t> expectedBidinfo = {0, 0};
+    std::pair<uint32_t, uint32_t> bid_info = orderBook.GetBestBidWithQuantity();
+    std::pair<uint32_t, uint32_t> expected_bid_info = {0, 0};
 
-    EXPECT_EQ(bidinfo, expectedBidinfo);
+    EXPECT_EQ(bid_info, expected_bid_info);
 }
 
 TEST(ProcessOrdersTestSuit, getBestAskTest_NoVolume) {
@@ -391,10 +391,10 @@ TEST(ProcessOrdersTestSuit, getBestAskTest_NoVolume) {
 
     OrderBook orderBook;
 
-    std::pair<uint32_t, uint32_t> askinfo = orderBook.GetBestAskWithQuantity();
-    std::pair<uint32_t, uint32_t> expectedAskinfo = {0, 0};
+    std::pair<uint32_t, uint32_t> ask_info = orderBook.GetBestAskWithQuantity();
+    std::pair<uint32_t, uint32_t> expected_ask_info = {0, 0};
 
-    EXPECT_EQ(askinfo, expectedAskinfo);
+    EXPECT_EQ(ask_info, expected_ask_info);
 }
 
 TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices) {
@@ -411,10 +411,10 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices) {
     orderBook.AddOrder(sellorder2);
     orderBook.AddOrder(sellorder3);
 
-    uint32_t askQuantityInfo = orderBook.GetVolumeBetweenPrices(10, 11);
-    int expectedAskQuantityInfo = 15;
+    uint32_t ask_quantity_info = orderBook.GetVolumeBetweenPrices(10, 11);
+    int expected_ask_quantity_info = 15;
 
-    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+    EXPECT_EQ(ask_quantity_info, expected_ask_quantity_info);
 }
 
 TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_WrongInput) {
@@ -431,10 +431,10 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_WrongInput) {
     orderBook.AddOrder(sellorder2);
     orderBook.AddOrder(sellorder3);
 
-    uint32_t askQuantityInfo = orderBook.GetVolumeBetweenPrices(11, 10);  // start>end wrong input
-    int expectedAskQuantityInfo = 0;
+    uint32_t ask_quantity_info = orderBook.GetVolumeBetweenPrices(11, 10);  // start>end wrong input
+    int expected_ask_quantity_info = 0;
 
-    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+    EXPECT_EQ(ask_quantity_info, expected_ask_quantity_info);
 }
 
 TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_NoAsk) {
@@ -444,10 +444,10 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_NoAsk) {
 
     OrderBook orderBook;
 
-    uint32_t askQuantityInfo = orderBook.GetVolumeBetweenPrices(11, 10);  // start>end wrong input
-    int expectedAskQuantityInfo = 0;
+    uint32_t ask_quantity_info = orderBook.GetVolumeBetweenPrices(11, 10);  // start>end wrong input
+    int expected_ask_quantity_info = 0;
 
-    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+    EXPECT_EQ(ask_quantity_info, expected_ask_quantity_info);
 }
 
 TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_BottomOfList) {
@@ -464,10 +464,10 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_BottomOfList) {
     orderBook.AddOrder(sellorder2);
     orderBook.AddOrder(sellorder3);
 
-    uint32_t askQuantityInfo = orderBook.GetVolumeBetweenPrices(12, 12);  // start>end wrong input
-    int expectedAskQuantityInfo = 5;
+    uint32_t ask_quantity_info = orderBook.GetVolumeBetweenPrices(12, 12);  // start>end wrong input
+    int expected_ask_quantity_info = 5;
 
-    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+    EXPECT_EQ(ask_quantity_info, expected_ask_quantity_info);
 }
 
 // todo also check if the pushing back all the orders was correct
@@ -492,30 +492,30 @@ TEST(ProcessOrdersTestSuit, getAskVolumeBetweenPrices_OrdersCorrectAfter) {
     orderBook.AddOrder(sellorder5);
 
     // Check 3 different prices
-    uint32_t askQuantityInfo = orderBook.GetVolumeBetweenPrices(13, 13);  // start>end wrong input
-    int expectedAskQuantityInfo = 5;
-    EXPECT_EQ(askQuantityInfo, expectedAskQuantityInfo);
+    uint32_t ask_quantity_info = orderBook.GetVolumeBetweenPrices(13, 13);  // start>end wrong input
+    int expected_ask_quantity_info = 5;
+    EXPECT_EQ(ask_quantity_info, expected_ask_quantity_info);
 
-    uint32_t askQuantityInfo2 = orderBook.GetVolumeBetweenPrices(12, 12);  // start>end wrong input
-    int expectedAskQuantityInfo2 = 10;
-    EXPECT_EQ(askQuantityInfo2, expectedAskQuantityInfo2);
+    uint32_t ask_quantity_info2 = orderBook.GetVolumeBetweenPrices(12, 12);  // start>end wrong input
+    int expected_ask_quantity_info2 = 10;
+    EXPECT_EQ(ask_quantity_info2, expected_ask_quantity_info2);
 
-    uint32_t askQuantityInfo3 = orderBook.GetVolumeBetweenPrices(5, 15);  // start>end wrong input
-    int expectedAskQuantityInfo3 = 35;
-    EXPECT_EQ(askQuantityInfo3, expectedAskQuantityInfo3);
+    uint32_t ask_quantity_info3 = orderBook.GetVolumeBetweenPrices(5, 15);  // start>end wrong input
+    int expected_ask_quantity_info3 = 35;
+    EXPECT_EQ(ask_quantity_info3, expected_ask_quantity_info3);
 
     // check if trade happens as expected after asking volumes
     Order buyorder1{OrderType::BUY, 6, 10, 100};
     orderBook.AddOrder(buyorder1);
 
-    std::vector<Trade> expectedTrades = {{6, 1, 10, 10, /* timestamp not compared */},
-                                         {6, 2, 10, 10, /* timestamp not compared */}};
+    std::vector<trade> expected_trades = {{6, 1, 10, 10, /* timestamp not compared */},
+                                          {6, 2, 10, 10, /* timestamp not compared */}};
 
-    const std::vector<Trade>& actualTrades = orderBook.GetTrades();
-    ASSERT_EQ(expectedTrades.size(), actualTrades.size());
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
     // check every field in the structure if it is the same
-    for (size_t i = 0; i < expectedTrades.size(); ++i) {
-        EXPECT_EQ(expectedTrades[i], actualTrades[i]);
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
     }
 }
 
@@ -529,24 +529,24 @@ TEST(ProcessOrdersTestSuit, GetBestBid) {
     orderBook.AddOrder(buyorder2);
     orderBook.AddOrder(buyorder3);
 
-    uint32_t actualResult = orderBook.GetBestBid();
-    uint32_t expectedResult = 200;
+    uint32_t actual_result = orderBook.GetBestBid();
+    uint32_t expected_result = 200;
 
-    ASSERT_EQ(actualResult, expectedResult);
+    ASSERT_EQ(actual_result, expected_result);
 }
 
 TEST(ProcessOrdersTestSuit, GetBestAsk) {
-    Order askorder1{OrderType::SELL, 1, 100, 5};
-    Order askorder2{OrderType::SELL, 2, 150, 5};
-    Order askorder3{OrderType::SELL, 3, 200, 5};
+    Order sellorder1{OrderType::SELL, 1, 100, 5};
+    Order sellorder2{OrderType::SELL, 2, 150, 5};
+    Order sellorder3{OrderType::SELL, 3, 200, 5};
 
     OrderBook orderBook;
-    orderBook.AddOrder(askorder1);
-    orderBook.AddOrder(askorder2);
-    orderBook.AddOrder(askorder3);
+    orderBook.AddOrder(sellorder1);
+    orderBook.AddOrder(sellorder2);
+    orderBook.AddOrder(sellorder3);
 
-    uint32_t actualResult = orderBook.GetBestAsk();
-    uint32_t expectedResult = 100;
+    uint32_t actual_result = orderBook.GetBestAsk();
+    uint32_t expected_result = 100;
 
-    ASSERT_EQ(actualResult, expectedResult);
+    ASSERT_EQ(actual_result, expected_result);
 }
