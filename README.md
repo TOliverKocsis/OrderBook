@@ -117,40 +117,22 @@ Tests executed with N in range 2<sup>10</sup> - 2<sup>20</sup>, where N is the d
 AddOrder row
 therefore relates to Adding an order to a database that already contains N orders.
 
-| Test                      | Time Complexity | RMS  | Time  min - max |
-|---------------------------|-----------------|------|-----------------|
-| AddOrder_PriceRange_3     | 501.50 O(1)     | 4 %  | 473 ns - 553 ns |
-| AddOrder_PriceRange_20    | 671.34 O(1)     | 5 %  | 639 ns - 716 ns |
-| Add1_Cancel1_Random_Order | 41.7 O(lgN)     | 15 % | 478 ns - 857 ns |
-| GetAskVolumeBetweenPrices | 151.3 O(1)      | 1 %  | 149 ns - 152 ns |
-| GetBestBid                | 26.13 O(1)      | 2 %  | 25 ns - 27 ns   |
+| Test                      | Time Complexity | RMS  | Time  min - max   |
+|---------------------------|-----------------|------|-------------------|
+| AddOrder_PriceRange_3     | 84.26 O(1)      | 4 %  | 82.7 ns - 84.9 ns |
+| AddOrder_PriceRange_20    | 84.65 O(1)      | 1 %  | 83.3 ns - 87 ns   |
+| Add1_Cancel1_Random_Order | 22.76 O(lgN)    | 25 % | 190 ns - 569 ns   |
+| GetAskVolumeBetweenPrices | 5.36 O(1)       | 5 %  | 5.04 ns - 5.86 ns |
+| GetBestBid                | 0.58 O(1)       | 4 %  | 0.59 ns - 0.61 ns |
 
 The results largely confirm the expected theoretical time complexities, with the exception of the
 `Add1_Cancel1_Random_Order` test. This benchmark measures the time to cancel a random order, where the addition of an
-order is not timed but included to maintain a consistent database size.
-Most tests were conducted with database sizes ranging from 1,024 to 1 million entries, and the performance appears to be
-influenced by the lookup efficiency of the `std::unordered_map` data structure.
-
-For database sizes between 1,000 and 65,000 entries, the performance remains stable, with timings ranging from 461ns to
-504ns.
-However, as the database size increases, the following results are observed:
-
-- At 262,000 entries: 740ns
-- At 524,000 entries: 825ns
-- At 1 million entries: 857ns
-- At 4 million entries: 830ns
-- At 8 million entries: 926ns
-- At 33 million entries: 972ns
-- At 134 million entries: 986ns
-
-While there appears to be some scaling effect up to 1 million entries—likely due to rehashing—the performance stabilizes
-between 524,000 and 4 million entries, around 830ns. At a database size of 8 million, the time increases to 926ns,
-likely due to hardware limitations such as increased cache misses, as the cache cannot accommodate the next random ID.
-
-Based on these cache sizes, the estimated number of entries that can fit in each cache level is as follows:
-
-- **L1 Cache**: ~2,072 entries
-- **L2 Cache**: ~80,000 entries
-- **L3 Cache**: ~1.125 million entries
+order is not timed but included to maintain a consistent database size. The theoretical search complexity is average O(
+1), but here logarithmic complexity is measured for the whole function.
+Most tests were conducted with database sizes ranging from 1,024 to 1 million entries. The performance appears to be
+influenced by the lookup efficiency of the `std::unordered_map` data structure, for profiling shall be conducted to
+confirm.
+Another step would be to observe cache misses on L1 L2 L3 cache, at different lookup table sizes: 65k, 131k,
+524k, 16 million and 134 million.
 
 
