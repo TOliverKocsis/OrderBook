@@ -58,7 +58,7 @@ std::vector<OrderMessage> LoadOrdersFromCSV(const std::string& filename) {
             } else if (order_message_type_str == "GetAskVolumeBetweenPrices") {
                 next_order_msg.order_message_type = OrderMessageType::GET_ASK_VOLUME_BETWEEN_PRICES;
                 do {
-                    std::getline(ss, word, ',');  // skip empty lines todo: not ideal
+                    std::getline(ss, word, ',');  // skip empty lines
                 } while (word.empty());
                 next_order_msg.lower_price = std::stoi(word);
                 std::getline(ss, word, ',');

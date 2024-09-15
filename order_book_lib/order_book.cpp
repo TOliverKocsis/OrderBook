@@ -13,7 +13,7 @@
 #else
 #define DEBUG_PRINT(x) \
     do {               \
-    } while (false)
+    } while (0)
 #endif
 
 /*
@@ -146,7 +146,7 @@ void OrderBook::CancelOrderbyId(uint32_t order_id) {
 
 void printTrade(const trade &trade) {
     // Debug print controlled by Cmake flag to disable print during benchmark(/"release").
-    DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buyOrderId << " with SellOrderID: " << trade.sellOrderId
+    DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buy_order_id << " with SellOrderID: " << trade.sell_order_id
                                                << " at price " << trade.price << " for quantity " << trade.quantity
                                                << std::endl);
 }
