@@ -68,7 +68,6 @@ void OrderBook::ProcessOrders() {
 OrderBook::OrderBook() {
     // Track max order id so far, to keep the rule of increasing order numbers during a day.
     order_id_tracker_ = 0;
-    bids_db_.reserve(262145);
 }
 
 void OrderBook::AddOrder(Order order) {
