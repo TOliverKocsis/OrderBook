@@ -1,6 +1,11 @@
+//
+// Created by oliverk on 29/07/24.
+//
 #include "order_book.hpp"
 
 #include <iostream>
+#include <queue>
+#include <stack>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -16,223 +21,235 @@
     } while (0)
 #endif
 
-/*
- * Check if we can match sell and buy orders in the OrderBook for trades to happen.
- * If trade happens, delete Orders with zero quantity left.
- */
 void OrderBook::ProcessOrders() {
-    while (!bids_level_.empty() and !asks_level_.empty()) {
-        uint32_t best_bid = GetBestBid();
-        uint32_t best_ask = GetBestAsk();
-        if (best_bid >= best_ask) {
-            Level &bid_level = bids_level_.begin()->second;
-            Level &ask_level = asks_level_.begin()->second;
-            Order &bid_order = bids_level_.begin()->second.orders_list.front();
-            Order &ask_order = asks_level_.begin()->second.orders_list.front();
+    // TODO could this be done by another thread?
+    while (!bids_level.empty() and !asks_level.empty()) {
+        auto best_bid = bids_level.top();
+        auto best_ask = asks_level.top();
+        if (best_bid.first >= best_ask.first) {
+            // fulfill the order if levels are in line
 
-            uint32_t traded_amount = std::min(bid_order.quantity, ask_order.quantity);
+            Order& bid_order = bids_db[best_bid.second];
+            Order& ask_order = asks_db[best_ask.second];
 
-            // Reduce quantity of trade of both ask and bid, and their holding level.
+            // handle amounts traded
+            int traded_amount = std::min(bid_order.quantity, ask_order.quantity);
+
+            // reduce quantity of trade of both ask and bid by the smaller amount
             uint32_t new_bid_quantity = bid_order.quantity - traded_amount;
-            bid_level.quantity -= traded_amount;
             bid_order.quantity = new_bid_quantity;
 
             uint32_t new_ask_quantity = ask_order.quantity - traded_amount;
-            ask_level.quantity -= traded_amount;
             ask_order.quantity = new_ask_quantity;
 
-            // Simulate order record / sending a network message.
-            ExecuteTrade(bid_order.orderId, ask_order.orderId, ask_order.price, traded_amount);
+            // simulate order processing
+            ExecuteTrade(bid_order.orderId, ask_order.orderId, bid_order.price, traded_amount);
 
-            // Remove empty orders from hashmap, linked list, and purge empty level with zero orders.
+            // remove the order from the orderbook, that has no quantity left
             if (bid_order.quantity == 0) {
-                bids_db_.erase(bid_order.orderId);  // 1. remove from hashmap
-                bid_level.orders_list.pop_front();  // 2. remove from linked list
-                if (bid_level.quantity < 1) {       // 3. remove empty level from map
-                    bids_level_.erase(bid_level.price);
-                }
+                bids_db.erase(bid_order.orderId);
+                bids_level.pop();
             }
             if (ask_order.quantity == 0) {
-                asks_db_.erase(ask_order.orderId);  // 1. remove from hashmap
-                ask_level.orders_list.pop_front();  // 2. remove from linked list
-                if (ask_level.quantity < 1) {       // 3. remove empty level from map
-                    asks_level_.erase(ask_level.price);
-                }
+                asks_db.erase(ask_order.orderId);
+                asks_level.pop();
             }
         } else {
+            // run until we order in the orderbook, and some were matching,
+            // here we have no more levels to match
             break;
-        }  // no orders to match
+        }
     }
 }
 
 OrderBook::OrderBook() {
-    // Track max order id so far, to keep the rule of increasing order numbers during a day.
-    order_id_tracker_ = 0;
+    // Constructor implementation
+    OrderIDTracker = 0;  // track max order id so far, to keep the rule of increasing order numbers during a day
 }
 
 void OrderBook::AddOrder(Order order) {
     if (order.quantity < 1) {
         throw std::invalid_argument("Quantity must be more than zero.");
     }
-    if (order.orderId <= order_id_tracker_) {
+    if (order.orderId <= OrderIDTracker) {
         throw std::invalid_argument("Order ID must be increasing and uniq number.");
     }
     if (order.price < 1) {
         throw std::invalid_argument("Price must be more than zero.");
     }
     if (order.order_type == OrderType::UNDEFINED) {
-        return;  // chose to simply ignore undefined orders
-    }
+        return;
+    }  // chose to simply ignore undefined orders
 
-    order_id_tracker_ = std::max(order_id_tracker_, order.orderId);
-    uint32_t price = order.price;
+    OrderIDTracker = std::max(OrderIDTracker, order.orderId);
     if (order.order_type == OrderType::BUY) {
-        if (!bids_level_.contains(price)) {
-            // Add price level to bin search tree (std::map).
-            Level new_price_level;
-            new_price_level.price = price;
-            bids_level_[price] = new_price_level;
-        }
-        bids_level_[price].quantity += order.quantity;
-        order.parent_level = &bids_level_[price];
-        auto it = bids_level_[price].orders_list.insert(bids_level_[price].orders_list.end(), order);
-        bids_db_[order.orderId] = it;
+        bids_db[order.orderId] = order;  // add to hashmap for quick lookup and modification
+        uint32_t price = order.price;
+        uint32_t orderid = order.orderId;  // uniq identifier of this order
+        bids_level.push(
+            std::make_pair(price, orderid));  // add pair of [pricepoint, orderId] for quick lookup of best price
     }
     if (order.order_type == OrderType::SELL) {
-        if (!asks_level_.contains(price)) {
-            // Add price level to bin search tree (std::map).
-            Level new_price_level;
-            new_price_level.price = price;
-            asks_level_[price] = new_price_level;
-        }
-        asks_level_[price].quantity += order.quantity;
-        order.parent_level = &asks_level_[price];
-        auto it = asks_level_[price].orders_list.insert(asks_level_[price].orders_list.end(), order);
-        asks_db_[order.orderId] = it;
+        asks_db[order.orderId] = order;
+        asks_level.push(std::make_pair(order.price, order.orderId));
     }
-    // After adding new price point, run processing to see if we can fulfill any orders.
+    // after adding new price point, run processing to see if we can fulfill any orders
     ProcessOrders();
 }
 
 /*
- * Cancel an order based on order id.
+ * Cancel an order based on order id
  */
-void OrderBook::CancelOrderbyId(uint32_t order_id) {
-    if (bids_db_.contains(order_id)) {
-        auto listIt = bids_db_[order_id];                   // get list iterator from hashmap
-        Order &del_target_order = *listIt;                  // dereference it to get the Order struct
-        Level &ref_level = *del_target_order.parent_level;  // get a level pointer from Order struct
-        ref_level.orders_list.erase(listIt);                // remove from linkedlist pointer(=list::iterator)
-        bids_db_.erase(order_id);
-        ref_level.quantity -= del_target_order.quantity;  // reduce quantity
-        if (ref_level.quantity < 1) {
-            bids_level_.erase(ref_level.price);  // remove empty level from map
+void OrderBook::CancelOrderbyId(uint32_t orderId) {
+    // check if we can see this orderid in either asks or bids
+    if (bids_db.contains(orderId)) {
+        // todo this is O(N+logN), not ideal,  O(1) avg cancellation would be preferred
+        // where N is the number of orders in the db(memory), deeper the order in the book is worse
+        // todo if we have some constant level info that needs to be updated
+
+        // make a stack and dig out the order we need from the prioQ, then put them back
+        std::stack<std::pair<int, int>> bids_stack;
+        auto bid = bids_level.top();
+        bids_level.pop();
+        bids_stack.push(bid);
+
+        while (bids_stack.top().second != orderId) {
+            bid = bids_level.top();
+            bids_level.pop();
+            bids_stack.push(bid);
         }
+        // found bid, and its on stack top now, already removed from prioq
+        bids_stack.pop();  // removed now
+        while (!bids_stack.empty()) {
+            // re add all the orders to the prioq
+            bid = bids_stack.top();
+            bids_stack.pop();
+            bids_level.push(bid);
+        }
+        bids_db.erase(orderId);
         return;
     }
-    if (asks_db_.contains(order_id)) {
-        auto list_iterator = asks_db_[order_id];         // get list iterator from hashmap
-        Order &delTargetOrder = *list_iterator;          // dereference it to get the Order struct
-        Level &refLevel = *delTargetOrder.parent_level;  // get a level pointer from Order struct
-        refLevel.orders_list.erase(list_iterator);       // remove from linkedlist pointer(=list::iterator)
-        asks_db_.erase(order_id);
-        refLevel.quantity -= delTargetOrder.quantity;  // reduce quantity
-        if (refLevel.quantity < 1) {
-            asks_level_.erase(refLevel.price);  // remove empty level from map
+
+    if (asks_db.contains(orderId)) {
+        // make a stack and dig out the order we need from the prioQ
+        std::stack<std::pair<int, int>> asks_stack;
+        auto ask = asks_level.top();
+        asks_level.pop();
+        asks_stack.push(ask);
+
+        while (asks_stack.top().second != orderId) {
+            ask = asks_level.top();
+            asks_level.pop();
+            asks_stack.push(ask);
         }
+        // found bid, and its on stack top now, already removed from prioq
+        asks_stack.pop();  // removed now
+        while (!asks_stack.empty()) {
+            // re add all the orders to the prioq
+            ask = asks_stack.top();
+            asks_stack.pop();
+            asks_level.push(ask);
+        }
+        asks_db.erase(orderId);
     }
 }
 
-void printTrade(const trade &trade) {
-    // Debug print controlled by Cmake flag to disable print during benchmark(/"release").
-    DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buy_order_id << " with SellOrderID: " << trade.sell_order_id
+void printTrade(const Trade& trade) {
+    // debug print controlled by Cmake flag to disable print during benchmark(/"release")
+    DEBUG_PRINT("Trade executed: BuyOrderID: " << trade.buyOrderId << " with SellOrderID: " << trade.sellOrderId
                                                << " at price " << trade.price << " for quantity " << trade.quantity
                                                << std::endl);
 }
 
-void OrderBook::ExecuteTrade(uint32_t buy_order_id, uint32_t sellOrderId, double price, uint32_t quantity) {
-    trade trade = {buy_order_id, sellOrderId, price, quantity, std::chrono::system_clock::now()};
+void OrderBook::ExecuteTrade(uint32_t buyOrderId, uint32_t sellOrderId, double price, uint32_t quantity) {
+    Trade trade = {buyOrderId, sellOrderId, price, quantity, std::chrono::system_clock::now()};
     trades.push_back(trade);
     printTrade(trade);
 }
 
-std::vector<trade> &OrderBook::GetTrades() { return trades; }
+std::vector<Trade>& OrderBook::GetTrades() { return trades; }
 
 /*
- * Return pair of Price and Quantity.
- * If there are multiple bids on the same price (same level) their quantites are
- * added together.
+ * Return pair of Price and Quantity
+ * If there are multiple bids on the same price (same level) their quantites are added together
  */
 std::pair<uint32_t, uint32_t> OrderBook::GetBestBidWithQuantity() {
-    if (bids_level_.empty()) {
+    if (bids_level.empty()) {
         return std::make_pair(0, 0);
     }
-    return std::make_pair(bids_level_.begin()->first, bids_level_.begin()->second.quantity);
+
+    int bidPrice = bids_level.top().first;
+    int bidLevelQuantity = 0;
+
+    // now need to check if we have more quantity on this level
+    // again a not ideal way, we need to pop from the tree O(logN) and put it to the stack until we see same prices
+    // but go ahead with implementation for measuring performance, and comparing it to better implementations
+    std::stack<std::pair<int, int>> bidsStackSave;
+
+    while (!bids_level.empty() and bids_level.top().first == bidPrice) {
+        auto nextBid = bids_level.top();
+        bids_level.pop();
+        bidsStackSave.push(nextBid);
+        bidLevelQuantity += bids_db[nextBid.second].quantity;
+    }
+    // the bids_level prioq top is now different price, or empty
+    // now push back all the stack
+    while (!bidsStackSave.empty()) {
+        auto nextBid = bidsStackSave.top();
+        bidsStackSave.pop();
+        bids_level.push(nextBid);  // push back to prioQ to keep previous state
+    }
+    return std::make_pair(bidPrice, bidLevelQuantity);
 }
 
 /*
- * Return pair of 1:Price and 2:Quantity.
- * If there are multiple bids on the same price (same level) their quantites are
- * added together.
- */
-std::pair<uint32_t, uint32_t> OrderBook::GetBestAskWithQuantity() {
-    if (asks_level_.empty()) {
-        return std::make_pair(0, 0);
-    }
-    return std::make_pair(asks_level_.begin()->first, asks_level_.begin()->second.quantity);
-}
-
-/*
- * Returns the quantity of ask orders between start and end input values, both
- * being inclusive.
+ * Returns the quantity of ask orders between start and end input values both being inclusive
  */
 uint32_t OrderBook::GetVolumeBetweenPrices(uint32_t start, uint32_t end) {
-    if (asks_level_.empty()) {
+    if (asks_level.empty()) {
         return 0;
     }
+
+    // todo again this is very inefficient: O(nlogn) time and O(N) space where N is the depth in the ask prioq
+    uint32_t volume = 0;
     if (start > end) {
         return 0;
     }
-    // If the first ask price, so lower, is already lower than end value, quantity will be zero.
-    if (asks_level_.begin()->first > end) {
+    // if the first ask price, so lowest, is already lower than end value, quantity will be zero
+    if (asks_level.top().first > end) {
         return 0;
     }
 
-    uint32_t volume = 0;
-    for (uint32_t curPriceCheck = start; curPriceCheck < end + 1; curPriceCheck++) {
-        if (asks_level_.contains(curPriceCheck)) {
-            volume += asks_level_[curPriceCheck].quantity;
+    std::stack<std::pair<int, int>> asksStackSave;
+    while (!asks_level.empty() and start > asks_level.top().first) {  // BUG todo what if start value is much smaller??
+        // save until we arrive to the price we do want to process
+        auto nextAsk = asks_level.top();
+        asks_level.pop();
+        asksStackSave.push(nextAsk);
+    }
+    // if we ended up searching until asks level is empty, we put back from stack and ret
+    if (asks_level.empty()) {
+        while (!asksStackSave.empty()) {
+            auto nextAskSave = asksStackSave.top();
+            asksStackSave.pop();
+            asks_level.push(nextAskSave);
         }
+        return 0;
     }
+    // if prioq is not empty and prev while loop stopped it means we are at a price where current top = start
+    // so we search until the price is out of range, or prioq empty
+    while (!asks_level.empty() and asks_level.top().first <= end) {
+        auto nextAsk = asks_level.top();
+        asks_level.pop();
+        asksStackSave.push(nextAsk);
+        volume += asks_db[nextAsk.second].quantity;
+    }
+    // put back examined orders
+    while (!asksStackSave.empty()) {
+        auto nextAskSave = asksStackSave.top();
+        asksStackSave.pop();
+        asks_level.push(nextAskSave);
+    }
+
     return volume;
-}
-
-unsigned long OrderBook::GetBidQuantity() {
-    unsigned long quantity = 0;
-    for (auto const &mapPair : bids_level_) {
-        quantity += mapPair.second.quantity;
-    }
-    return quantity;
-}
-
-unsigned long OrderBook::GetAskQuantity() {
-    unsigned long quantity = 0;
-    for (auto const &mapPair : asks_level_) {
-        quantity += mapPair.second.quantity;
-    }
-    return quantity;
-}
-
-uint32_t OrderBook::GetBestBid() {
-    if (bids_level_.empty()) {
-        return 0;
-    }
-    return bids_level_.begin()->second.price;
-}
-
-uint32_t OrderBook::GetBestAsk() {
-    if (asks_level_.empty()) {
-        return 0;
-    }
-    return asks_level_.begin()->second.price;
 }
