@@ -60,22 +60,20 @@ Testing was done on Ubuntu, with i5-12400F, 6cores, 4400Mhz. Cache sizes:
 Tests executed with N in range 2<sup>10</sup> - 2<sup>20</sup>, where N is the database size. The Time column and
 AddOrder row therefore relates to adding an order to a database that already contains N orders.
 
-| Test                      | Time Complexity | RMS  |
-|---------------------------|-----------------|------|
-| AddOrder_PriceRange_3     | 464.91 O(1)     | 2 %  |
-| AddOrder_PriceRange_10    | 386.12 O(1)     | 5 %  |
-| Add1_Cancel1_Random_Order | 34.48 O(NlgN)   | 13 % |
-| GetAskVolumeBetweenPrices | 66.50 O(NlgN)   | 1 %  |
-| GetBestBid                | 20.79 O(NlgN)   | 3 %  |
+| Test                      | Time Complexity | RMS  | Time min - max [ns]    |
+|---------------------------|-----------------|------|------------------------|
+| AddOrder_PriceRange_3     | 65.81 O(1)      | 10 % | 57.8 ns - 72.7 ns      |
+| AddOrder_PriceRange_20    | 65.01 O(1)      | 5 %  | 58.4 ns - 65.1 ns      |
+| Add1_Cancel1_Random_Order | 3.09 O(NlgN)    | 6 %  | 13867 ns - 65655574 ns |
+| GetAskVolumeBetweenPrices | 4.66 O(NlgN)    | 2 %  | 25416 ns - 97618398 ns |
+| GetBestBid                | 1.86 O(NlgN)    | 2 %  | 9610 ns - 38893371 ns  |
 
 The insertion operation for `std::priority_queue` has a time complexity of O(log N), as detailed in the
 [C++ reference documentation](https://en.cppreference.com/w/cpp/container/priority_queue).
-In the Google benchmark, random prices within ranges of 3 and 10 were repeatedly added to the priority queue.
+In the Google benchmark, random prices within ranges of 3 and 20 were repeatedly added to the priority queue.
 Given the high volume of operations and the absence of other CPU tasks during the benchmark, the operation appears
 highly optimized, with performance approaching O(1). This suggests that the heap size has a minimal impact on
-the time required to add additional elements. The relatively large constant factor of 465 indicates that the operation's
-baseline cost is non-trivial. Furthermore, the benchmark demonstrates a slight performance improvement with a larger
-price range of 10, likely due to a more even distribution of elements within the underlying container.
+the time required to add additional elements.
 The other results align with expectations, showing O(NlogN) complexity for order lookups,
 as theoretically predicted.
 
