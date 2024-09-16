@@ -46,16 +46,16 @@ void OrderBook::ProcessOrders() {
 
             // Remove empty orders from hashmap, linked list, and purge empty level with zero orders.
             if (bid_order.quantity == 0) {
-                bids_db_.erase(bid_order.orderId);  // 1. remove from hashmap
-                bid_level.orders_list.pop_front();  // 2. remove from linked list
-                if (bid_level.quantity < 1) {       // 3. remove empty level from map
+                order_hashmap_.erase(bid_order.orderId);  // 1. remove from hashmap
+                bid_level.orders_list.pop_front();        // 2. remove from linked list
+                if (bid_level.quantity < 1) {             // 3. remove empty level from map
                     bids_level_.erase(bid_level.price);
                 }
             }
             if (ask_order.quantity == 0) {
-                asks_db_.erase(ask_order.orderId);  // 1. remove from hashmap
-                ask_level.orders_list.pop_front();  // 2. remove from linked list
-                if (ask_level.quantity < 1) {       // 3. remove empty level from map
+                order_hashmap_.erase(ask_order.orderId);  // 1. remove from hashmap
+                ask_level.orders_list.pop_front();        // 2. remove from linked list
+                if (ask_level.quantity < 1) {             // 3. remove empty level from map
                     asks_level_.erase(ask_level.price);
                 }
             }
@@ -96,7 +96,7 @@ void OrderBook::AddOrder(Order order) {
         bids_level_[price].quantity += order.quantity;
         order.parent_level = &bids_level_[price];
         auto it = bids_level_[price].orders_list.insert(bids_level_[price].orders_list.end(), order);
-        bids_db_[order.orderId] = it;
+        order_hashmap_[order.orderId] = it;
     }
     if (order.order_type == OrderType::SELL) {
         if (!asks_level_.contains(price)) {
@@ -108,7 +108,7 @@ void OrderBook::AddOrder(Order order) {
         asks_level_[price].quantity += order.quantity;
         order.parent_level = &asks_level_[price];
         auto it = asks_level_[price].orders_list.insert(asks_level_[price].orders_list.end(), order);
-        asks_db_[order.orderId] = it;
+        order_hashmap_[order.orderId] = it;
     }
     // After adding new price point, run processing to see if we can fulfill any orders.
     ProcessOrders();
@@ -118,27 +118,19 @@ void OrderBook::AddOrder(Order order) {
  * Cancel an order based on order id.
  */
 void OrderBook::CancelOrderbyId(uint32_t order_id) {
-    if (bids_db_.contains(order_id)) {
-        auto listIt = bids_db_[order_id];                   // get list iterator from hashmap
+    if (order_hashmap_.contains(order_id)) {
+        auto listIt = order_hashmap_[order_id];             // get list iterator from hashmap
         Order &del_target_order = *listIt;                  // dereference it to get the Order struct
         Level &ref_level = *del_target_order.parent_level;  // get a level pointer from Order struct
         ref_level.orders_list.erase(listIt);                // remove from linkedlist pointer(=list::iterator)
-        bids_db_.erase(order_id);
+        order_hashmap_.erase(order_id);
         ref_level.quantity -= del_target_order.quantity;  // reduce quantity
-        if (ref_level.quantity < 1) {
-            bids_level_.erase(ref_level.price);  // remove empty level from map
-        }
-        return;
-    }
-    if (asks_db_.contains(order_id)) {
-        auto list_iterator = asks_db_[order_id];         // get list iterator from hashmap
-        Order &delTargetOrder = *list_iterator;          // dereference it to get the Order struct
-        Level &refLevel = *delTargetOrder.parent_level;  // get a level pointer from Order struct
-        refLevel.orders_list.erase(list_iterator);       // remove from linkedlist pointer(=list::iterator)
-        asks_db_.erase(order_id);
-        refLevel.quantity -= delTargetOrder.quantity;  // reduce quantity
-        if (refLevel.quantity < 1) {
-            asks_level_.erase(refLevel.price);  // remove empty level from map
+        if (ref_level.quantity < 1) {                     // remove empty level from map
+            if (del_target_order.order_type == OrderType::BUY) {
+                bids_level_.erase(ref_level.price);
+            } else {
+                asks_level_.erase(ref_level.price);
+            }
         }
     }
 }

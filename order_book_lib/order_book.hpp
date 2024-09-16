@@ -12,8 +12,8 @@
 
 class OrderBook {
    private:
-    std::unordered_map<uint32_t, std::list<Order>::iterator> bids_db_;  // orderid -> Order struct in Levels std::list
-    std::unordered_map<uint32_t, std::list<Order>::iterator> asks_db_;
+    std::unordered_map<uint32_t, std::list<Order>::iterator>
+        order_hashmap_;  // orderid -> Order struct in Levels std::list
 
     std::map<uint32_t, Level, std::greater<>> bids_level_;  // price -> level object of orders in list
     std::map<uint32_t, Level> asks_level_;

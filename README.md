@@ -133,4 +133,16 @@ confirm.
 Another step would be to observe cache misses on L1 L2 L3 cache, at different lookup table sizes: 65k, 131k,
 524k, 16 million and 134 million.
 
+# Further improvements
+
+## Unified Hashmap Implementation
+
+Initially, separate `std::unordered_map` structures were used for ask and bid operations.
+To reduce branching in the `CancelOrderById` function, these were consolidated into a single hashmap.
+This optimization led to a performance improvement in the `BM_Add1_Cancel1_Random_Order_BigO` benchmark,
+achieving a complexity of 20.38 O(logN) with a reduction of 2.3 in the constant factor.
+RMS of this result is still relatively high(20-30%) so it is hard to conclude on gain / loss.
+However, this change also resulted in a minor performance degradation of 5 nanoseconds in the
+`AddOrder_PriceRange_20` benchmark, and also increased RMS of AddOrder_PriceRange_3 to 9% on average.
+Overall unpredictability is increased by this change.
 

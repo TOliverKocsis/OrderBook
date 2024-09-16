@@ -221,6 +221,60 @@ TEST(ProcessOrdersTestSuit, CancelOneOrder) {
     }
 }
 
+TEST(ProcessOrdersTestSuit, CancelAskOrder) {
+    /*
+     * Add a Sell order, and cancel it. Add a matching buy order, but since Sell was canceled,
+     * no trade should happen.
+     */
+
+    Order sellorder1{OrderType::SELL, 2, 100, 5};
+    Order buyorder1{OrderType::BUY, 3, 100, 10};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(sellorder1);
+    orderBook.CancelOrderbyId(sellorder1.orderId);
+    orderBook.AddOrder(buyorder1);
+
+    std::vector<trade> expected_trades = {};
+
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
+
+    ASSERT_EQ(orderBook.GetBidQuantity(), 10);
+    ASSERT_EQ(orderBook.GetAskQuantity(), 0);
+    // check every field in the structure if it is the same
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
+    }
+}
+
+TEST(ProcessOrdersTestSuit, CancelBuyOrder) {
+    /*
+     * Add a Buy order, and cancel it. Add a matching sell order, but since Buy was canceled,
+     * no trade should happen.
+     */
+
+    Order buyorder1{OrderType::BUY, 3, 100, 10};
+    Order sellorder1{OrderType::SELL, 4, 100, 5};
+
+    OrderBook orderBook;
+    orderBook.AddOrder(buyorder1);
+    orderBook.CancelOrderbyId(buyorder1.orderId);
+    orderBook.AddOrder(sellorder1);
+
+    std::vector<trade> expected_trades = {};
+
+    const std::vector<trade>& actual_trades = orderBook.GetTrades();
+    ASSERT_EQ(expected_trades.size(), actual_trades.size());
+
+    ASSERT_EQ(orderBook.GetBidQuantity(), 0);
+    ASSERT_EQ(orderBook.GetAskQuantity(), 5);
+    // check every field in the structure if it is the same
+    for (size_t i = 0; i < expected_trades.size(); ++i) {
+        EXPECT_EQ(expected_trades[i], actual_trades[i]);
+    }
+}
+
 TEST(ProcessOrdersTestSuit, MultipleOrdersCancelOneOrder) {
     /*
      *  Add multiple orders, but only one trade could happen, that is canceled before the matching order,
