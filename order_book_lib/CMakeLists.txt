@@ -5,6 +5,7 @@ set(HEADER_FILES
         order_book.hpp
         trade.hpp
         level.hpp
+        order_utilities.hpp
 )
 
 set(SOURCE_FILES

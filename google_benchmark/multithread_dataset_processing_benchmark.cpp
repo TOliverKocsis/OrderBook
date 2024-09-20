@@ -1,10 +1,11 @@
+#include <benchmark/benchmark.h>
+
 #include <boost/lockfree/spsc_queue.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <thread>
-#include <vector>
 
 #include "order.hpp"
 #include "order_book.hpp"
@@ -15,7 +16,8 @@ OrderBook order_book;
 std::atomic<bool> read_in_is_done;
 uint32_t debug_dummy_volume_ask = 0;
 uint32_t debug_dummy_volume_bid = 0;
-std::string filename = "../example_order_dataset/example_dataset.csv";
+std::string filename = "../../example_order_dataset/example_dataset.csv";
+
 
 /*
  * Load the simulated traffic: order messages from a the .csv file created by the data_generator.py to a vector.
@@ -24,7 +26,6 @@ void LoadOrdersFromCSV() {
     std::ifstream file(filename);
 
     if (file.is_open()) {
-        std::cout << "Example Dataset opened " << filename << std::endl;
         std::string line;
         std::getline(file, line);  // skip the header
 
@@ -81,7 +82,7 @@ void ProcessOrderMessages() {
     while (!read_in_is_done) {
         // check if single producer single consumer data queue has messages to consume
         if (order_messages.read_available() == 0) {
-            std::this_thread::sleep_for(std::chrono::microseconds(10));
+            continue;
         }
 
         // pop a message
@@ -105,16 +106,14 @@ void ProcessOrderMessages() {
     }
 }
 
-int main() {
-    read_in_is_done = false;  // flag for consumer_thread to keep running
-    std::thread producer_thread{LoadOrdersFromCSV};
-    std::thread consumer_thread{ProcessOrderMessages};
-    producer_thread.join();
-    consumer_thread.join();
-
-    std::cout << "Processing finished, trades recorded: " << order_book.GetTrades().size() << std::endl;
-    std::cout << "Returned ask volume: " << debug_dummy_volume_ask << std::endl;
-    std::cout << "Returned bid volume: " << debug_dummy_volume_bid << std::endl;
-
-    return 0;
+static void BM_LoadAndExecuteMessages_MultiThread(benchmark::State& state) {
+    for (auto _ : state) {
+        read_in_is_done = false;  // flag for consumer_thread to keep running
+        std::thread producer_thread{LoadOrdersFromCSV};
+        std::thread consumer_thread{ProcessOrderMessages};
+        producer_thread.join();
+        consumer_thread.join();
+    }
 }
+
+BENCHMARK(BM_LoadAndExecuteMessages_MultiThread);

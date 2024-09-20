@@ -74,9 +74,9 @@ void OrderBook::AddOrder(Order order) {
     if (order.quantity < 1) {
         throw std::invalid_argument("Quantity must be more than zero.");
     }
-    if (order.orderId <= order_id_tracker_) {
-        throw std::invalid_argument("Order ID must be increasing and uniq number.");
-    }
+    // if (order.orderId <= order_id_tracker_) {
+    //     throw std::invalid_argument("Order ID must be increasing and uniq number.");
+    // }
     if (order.price < 1) {
         throw std::invalid_argument("Price must be more than zero.");
     }

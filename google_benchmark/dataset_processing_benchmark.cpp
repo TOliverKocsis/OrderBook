@@ -8,16 +8,10 @@
 
 #include "order.hpp"
 #include "order_book.hpp"
+#include "order_utilities.hpp"
 
 /*  This Google Benchmark file is for measuring the simulated dataset processing
  * run time. */
-
-/* Helper */
-OrderType StringToOrderType(const std::string& str) {
-    if (str == "buy") return OrderType::BUY;
-    if (str == "sell") return OrderType::SELL;
-    return OrderType::UNDEFINED;
-}
 
 /*
  * Load the simulated traffic: order messages from a the .csv file created by
@@ -28,7 +22,6 @@ std::vector<OrderMessage> LoadOrdersFromCSV(const std::string& filename) {
     std::ifstream file(filename);
 
     if (file.is_open()) {
-        std::cout << "Example Dataset opened " << filename << std::endl;
         std::string line;
         std::getline(file, line);  // skip the header
 

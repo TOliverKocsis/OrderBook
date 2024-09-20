@@ -9,6 +9,7 @@ add_subdirectory(benchmark)
 set(BENCHMARK_SOURCES
         orderbook_functions_benchmark.cpp
         dataset_processing_benchmark.cpp
+        multithread_dataset_processing_benchmark.cpp
 )
 
 # Adding the benchmark run target
