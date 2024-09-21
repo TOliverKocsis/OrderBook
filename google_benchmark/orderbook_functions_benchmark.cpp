@@ -122,6 +122,44 @@ static void BM_Add1_Cancel1_Random_Order(benchmark::State &state) {
     state.SetComplexityN(state.range(0));
 }
 
+/*
+ * In this benchmark we only cancel 1 order but do not add another one, 1000 times inside the benchmark loop.
+ * This likely results in much better results for N close to 1000, as we cancel big % of all orders from the hashmap.
+ * At other CancelOrder  benchmark test we also add an order with a paused timer, so the database always stays N size.
+ * This frees up the overhead of pausing the timer, that even if it should not, still
+ */
+static void BM_Cancel1_Random_Order(benchmark::State &state) {
+    OrderBook order_book;
+    std::vector<unsigned long> order_ids(state.range(0), 0);  // save the id to know which one to cancel
+
+    std::random_device rd;                                                        // random seed
+    std::mt19937 gen(rd());                                                       // mersenne Twister engine
+    std::uniform_int_distribution<> uniform_int_distribution_price(100, 119);     // price range : 20
+    std::uniform_int_distribution<> uniform_int_distribution_quantity(50, 5000);  // define quantity range
+    std::uniform_int_distribution<> random_id_index(0, order_ids.size() - 1);     // define the range
+
+    int order_id = 1;
+    Order buy_order = {OrderType::BUY, 1, 100, 5};
+
+    // preload varied amount of orders, based on benchmark state input
+    for (int i = 0; i < state.range(0); i++) {
+        order_book.AddOrder(buy_order);
+        order_ids[i] = order_id;
+        order_id++;
+        buy_order.orderId = order_id;
+        buy_order.price = uniform_int_distribution_price(gen);
+        buy_order.quantity = uniform_int_distribution_quantity(gen);
+    }
+
+    for (auto _ : state) {
+        unsigned long random_order_id = order_ids[random_id_index(gen)];
+        order_book.CancelOrderbyId(random_order_id);
+        benchmark::DoNotOptimize(order_book);
+    }
+
+    state.SetComplexityN(state.range(0));
+}
+
 static void BM_Add1_Cancel1_Random_Order_Sell(benchmark::State &state) {
     OrderBook order_book;
     std::vector<unsigned long> order_ids(state.range(0), 0);  // save the id to know which one to cancel
@@ -234,8 +272,10 @@ BENCHMARK(BM_AddOrder_PriceRange_3)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)
 BENCHMARK(BM_AddOrder_PriceRange_20)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Complexity();
 
 // Cancel Order Benchmarks
+
 BENCHMARK(BM_Add1_Cancel1_Random_Order)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Complexity();
 BENCHMARK(BM_Add1_Cancel1_Random_Order_Sell)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Complexity();
+BENCHMARK(BM_Cancel1_Random_Order)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Iterations(1000)->Complexity();
 
 // Get Best Bid Benchmarks
 BENCHMARK(BM_GetBestBid)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Complexity();
