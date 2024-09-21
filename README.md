@@ -134,9 +134,16 @@ The results largely confirm the expected theoretical time complexities, except t
 order is not timed but included to maintain a consistent database size. The theoretical search complexity is average O(
 1), but here logarithmic complexity is measured for the whole function.
 Most tests were conducted with database sizes ranging from 1,024 to 1 million entries. The performance appears to be
-influenced by the lookup efficiency of the `std::unordered_map` data structure, profiling shall be conducted to
-confirm.
+influenced by the lookup efficiency of the `std::unordered_map` data structure.
 
-## Profiling of Version2
+## Profiling of Version2 dataset processing
+
+![Flamegraph2](./profiler_result/flamegraph_v2_main_singlethread.png)
+
+The profiling results of the `main.cpp` are shown. `LoadOrderFromCSV` takes around 30% of all execution.
+Execution of orders: `AddOrder`, `CancelOrder`, `GetBestBid`, `GetAskVolumeBetweenPrices` take similar amount of time,
+around 30%.
+Profiling results have low Precision, therefore these values vary, but nevertheless similar workload is observed.
+Since orders could be loaded and executed right away this is good candidate for using multithreading.
 
 
