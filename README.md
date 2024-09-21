@@ -47,13 +47,17 @@ However, this approach presents two notable limitations:
 <details>
 <summary> Benchmark system specs </summary>
 
-### Benchmark system specs
+### Benchmark System Specifications
 
-Testing was done on Ubuntu, with i5-12400F, 6cores, 4400Mhz. Cache sizes:
+The benchmarks were conducted on an Ubuntu system equipped with an Intel Core i5-12400F processor, featuring 6 cores
+with a clock speed of 4400 MHz. The processor’s cache configuration is as follows:
 
-- **L1 Data**: 48 KiB (×6)
-- **L2 Unified**: 1280 KiB (×6)
-- **L3 Unified**: 18,432 KiB / 18 MiB (×1)
+- **L1 Data Cache**: 48 KiB per core (6 cores total)
+- **L2 Unified Cache**: 1280 KiB per core (6 cores total)
+- **L3 Unified Cache**: 18,432 KiB / 18 MiB shared across all cores
+
+The code was compiled using GNU GCC (g++) version 11.4.0, with the optimization flag `-O3` and the standard
+`-std=gnu++20`, utilizing the C++20 language standard.
 
 </details>
 
@@ -109,6 +113,8 @@ Testing was done on Ubuntu, with i5-12400F, 6cores, 4400Mhz. Cache sizes:
 - **L2 Unified**: 1280 KiB (×6)
 - **L3 Unified**: 18,432 KiB / 18 MiB (×1)
 
+Compilation with GNU GCC (g++) 11.4.0, with -O3 and -std=gnu++20, so C++20 is used.
+
 </details>
 
 Tests executed with N in range 2<sup>10</sup> - 2<sup>20</sup>, where N is the database size. The Time column and
@@ -123,14 +129,14 @@ therefore relates to Adding an order to a database that already contains N order
 | GetAskVolumeBetweenPrices | 5.36 O(1)       | 5 %  | 5.04 ns - 5.86 ns |
 | GetBestBid                | 0.58 O(1)       | 4 %  | 0.59 ns - 0.61 ns |
 
-The results largely confirm the expected theoretical time complexities, with the exception of the
+The results largely confirm the expected theoretical time complexities, except the
 `Add1_Cancel1_Random_Order` test. This benchmark measures the time to cancel a random order, where the addition of an
 order is not timed but included to maintain a consistent database size. The theoretical search complexity is average O(
 1), but here logarithmic complexity is measured for the whole function.
 Most tests were conducted with database sizes ranging from 1,024 to 1 million entries. The performance appears to be
-influenced by the lookup efficiency of the `std::unordered_map` data structure, for profiling shall be conducted to
+influenced by the lookup efficiency of the `std::unordered_map` data structure, profiling shall be conducted to
 confirm.
-Another step would be to observe cache misses on L1 L2 L3 cache, at different lookup table sizes: 65k, 131k,
-524k, 16 million and 134 million.
+
+## Profiling of Version2
 
 
