@@ -146,7 +146,7 @@ around 30%.
 Profiling results have low Precision, therefore these values vary, but nevertheless similar workload is observed.
 Since orders could be loaded and executed right away this is good candidate for using multithreading.
 
-## Multithreading for Dataset Processing (Ongoing Work)
+# Multithreading for Dataset Processing (Ongoing Work)
 
 As outlined in the profiling results, multithreading has been implemented to optimize dataset processing.
 Two threads are utilized in this process: the first is responsible for loading new order messages from
@@ -164,6 +164,21 @@ synchronization, is significant and dominates the overall execution time.
 Ongoing work aims to examine and minimize this overhead and improve performance.
 
 ### Benchmarking Results
+
+<details>
+<summary> Benchmark system specs </summary>
+
+### Benchmark system specs
+
+Testing was done on Ubuntu, with i5-12400F, 6cores, 4400Mhz. Cache sizes:
+
+- **L1 Data**: 48 KiB (×6)
+- **L2 Unified**: 1280 KiB (×6)
+- **L3 Unified**: 18,432 KiB / 18 MiB (×1)
+
+Compilation with GNU GCC (g++) 11.4.0, with -O3 and -std=gnu++20, so C++20 is used.
+
+</details>
 
 | Test                                   | Time [ns]  | CPU Time [ns] |
 |----------------------------------------|------------|---------------|
