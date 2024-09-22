@@ -283,5 +283,6 @@ BENCHMARK(BM_GetBestBid)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Complexit
 // Get Ask Volume between Prices Benchmarks
 BENCHMARK(BM_GetAskVolumeBetweenPrices)->RangeMultiplier(2)->Range(1 << 10, 1 << 20)->Complexity();
 
+
 // Init and run all BENCHMARK macro registered cases
 BENCHMARK_MAIN();
