@@ -8,7 +8,15 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DENABLE_DEBUG_PRINTS)
 endif ()
 
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES
+        main.cpp
+        dataset_process.cpp
+)
+
+set(HEADER_FILES
+        dataset_process.hpp
+)
+
 add_executable(OrderBook_run ${SOURCE_FILES})
 
 include_directories(order_book_lib)
