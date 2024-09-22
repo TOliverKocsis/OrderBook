@@ -19,6 +19,16 @@ uint32_t debug_dummy_volume_ask = 0;
 uint32_t debug_dummy_volume_bid = 0;
 std::string filename = "../example_order_dataset/example_dataset.csv";
 
+// Preprocessor macro definitions
+#ifdef ENABLE_DEBUG_PRINTS
+#define DEBUG_PRINT(x) std::cout << x << std::endl;
+#else
+#define DEBUG_PRINT(x) \
+    do {               \
+    } while (0)
+#endif
+
+
 /*
  * Load the simulated traffic: order messages from a the .csv file created by the data_generator.py to a vector.
  */
@@ -26,7 +36,7 @@ void LoadOrdersFromCSV() {
     std::ifstream file(filename);
 
     if (file.is_open()) {
-        // std::cout << "Example Dataset opened " << filename << std::endl;
+        DEBUG_PRINT("Example Dataset opened " << filename);
         std::string line;
         std::getline(file, line);  // skip the header
 
@@ -86,7 +96,7 @@ void ProcessOrderMessages() {
             std::this_thread::sleep_for(std::chrono::microseconds(10));
         }
 
-        // pop a message
+        // get next order message from spsc queu
         OrderMessage next_order_msg;
         order_messages.pop(next_order_msg);
 
