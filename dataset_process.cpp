@@ -28,7 +28,6 @@ std::string filename = "../example_order_dataset/example_dataset.csv";
     } while (0)
 #endif
 
-
 /*
  * Load the simulated traffic: order messages from a the .csv file created by the data_generator.py to a vector.
  */

@@ -1,13 +1,12 @@
 #ifndef DATASET_PROCESS_HPP
 #define DATASET_PROCESS_HPP
 
+#include <atomic>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <string>
-#include <atomic>
+
 #include "order.hpp"
 #include "order_book.hpp"
-
-
 
 // Declare global variables using extern
 extern boost::lockfree::spsc_queue<OrderMessage> order_messages;
@@ -20,6 +19,4 @@ extern std::string filename;
 void ProcessOrderMessages();
 void LoadOrdersFromCSV();
 
-
-
-#endif //DATASET_PROCESS_HPP
+#endif  // DATASET_PROCESS_HPP
