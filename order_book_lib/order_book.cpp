@@ -119,10 +119,10 @@ void OrderBook::AddOrder(Order order) {
  */
 void OrderBook::CancelOrderbyId(uint32_t order_id) {
     if (bids_db_.contains(order_id)) {
-        auto listIt = bids_db_[order_id];                   // get list iterator from hashmap
-        Order &del_target_order = *listIt;                  // dereference it to get the Order struct
+        auto list_iterator = bids_db_[order_id];            // get list iterator from hashmap
+        Order &del_target_order = *list_iterator;           // dereference it to get the Order struct
         Level &ref_level = *del_target_order.parent_level;  // get a level pointer from Order struct
-        ref_level.orders_list.erase(listIt);                // remove from linkedlist pointer(=list::iterator)
+        ref_level.orders_list.erase(list_iterator);         // remove from linkedlist pointer(=list::iterator)
         bids_db_.erase(order_id);
         ref_level.quantity -= del_target_order.quantity;  // reduce quantity
         if (ref_level.quantity < 1) {
